@@ -1,8 +1,18 @@
-import { editor, system } from "@silverbulletmd/silverbullet/syscalls";
+import { index, system } from "@silverbulletmd/silverbullet/syscalls";
 import { parse as parseYaml } from "@std/yaml";
 
 /** A page with parsed geographic coordinates. */
 interface GeoPage {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+/** An indexed geolink extracted from page content. */
+interface GeoLink {
+  ref: string;
+  tag: string;
+  page: string;
   name: string;
   lat: number;
   lng: number;
@@ -90,6 +100,36 @@ async function queryGeoPages(locationKey: string): Promise<GeoPage[]> {
   return geoPages;
 }
 
+/**
+ * Page index event handler. Scans page content for embedded geolinks
+ * (`[name](geo:lat,lng)`) and stores them in the SilverBullet object index
+ * under the `"geolink"` tag so they can be queried efficiently.
+ *
+ * @param event - The page index event with `name` and `text` fields
+ */
+export async function indexGeoLinks(
+  { name, text }: { name: string; text: string },
+): Promise<void> {
+  const objects: GeoLink[] = [];
+  const regex = /\[([^\]]*)\]\(geo:([^,)]+),([^)]+)\)/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    const lat = Number(match[2].trim());
+    const lng = Number(match[3].trim());
+    if (isFinite(lat) && isFinite(lng)) {
+      objects.push({
+        ref: `${name}@${match.index}`,
+        tag: "geolink",
+        page: name,
+        name: match[1] || `${lat}, ${lng}`,
+        lat,
+        lng,
+      });
+    }
+  }
+  await index.indexObjects(name, objects);
+}
+
 /** Available map tile styles. */
 const TILES: Record<string, { url: string; attribution: string; maxZoom: number }> = {
   osm: { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors", maxZoom: 19 },
@@ -154,18 +194,20 @@ export async function mapWidget(
     initView = `map.setView([0,0],2);`;
   }
 
-  // Query pages with location frontmatter
+  // Query pages with location frontmatter and indexed geolinks
   const config = await getConfig();
   let geoPages: GeoPage[] = [];
+  let geoLinks: GeoLink[] = [];
   let debugError = "";
   try {
     geoPages = await queryGeoPages(config.frontMatterLocationKey);
+    geoLinks = await index.queryLuaObjects<GeoLink>("geolink", {});
   } catch (e) {
     debugError = String(e);
   }
 
   return {
-    html: `<style>body,html{margin:0;padding:0;}#map{width:100%;height:${height}px;}#debug{padding:8px;font-family:monospace;font-size:12px;white-space:pre;background:#1e1e1e;color:#d4d4d4;overflow:auto;max-height:300px;}</style><div id="map"></div><div id="debug">geo pages (${geoPages.length}): ${JSON.stringify(geoPages, null, 2).replace(/</g, '&lt;')}${debugError ? '\nerror: ' + debugError : ''}</div>`,
+    html: `<style>body,html{margin:0;padding:0;}#map{width:100%;height:${height}px;}#debug{padding:8px;font-family:monospace;font-size:12px;white-space:pre;background:#1e1e1e;color:#d4d4d4;overflow:auto;max-height:300px;}</style><div id="map"></div><div id="debug">geo pages (${geoPages.length}): ${JSON.stringify(geoPages, null, 2).replace(/</g, '&lt;')}\n\ngeolinks (${geoLinks.length}): ${JSON.stringify(geoLinks, null, 2).replace(/</g, '&lt;')}${debugError ? '\nerror: ' + debugError : ''}</div>`,
     script: `
       var link = document.createElement('link');
       link.rel = 'stylesheet';

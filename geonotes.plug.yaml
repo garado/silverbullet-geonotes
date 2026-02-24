@@ -3,3 +3,8 @@ functions:
   mapWidget:
     path: ./geonotes.ts:mapWidget
     codeWidget: map
+
+  indexGeoLinks:
+    path: ./geonotes.ts:indexGeoLinks
+    events:
+      - page:index
