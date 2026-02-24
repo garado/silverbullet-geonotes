@@ -59,16 +59,32 @@ function parseLocation(loc: unknown): { lat: number; lng: number } | null {
 }
 
 /**
- * Queries the SilverBullet index for all pages with a `location` frontmatter field
+ * Reads geonotes configuration from the SilverBullet CONFIG page.
+ * Users can configure via `config.set { geonote = { ... } }` in CONFIG.
+ *
+ * @returns Parsed geonotes config with defaults applied
+ */
+async function getConfig(): Promise<{ frontMatterLocationKey: string }> {
+  const raw = await system.getConfig("geonote", {}) as Record<string, unknown>;
+  return {
+    frontMatterLocationKey: typeof raw.frontMatterLocationKey === "string"
+      ? raw.frontMatterLocationKey
+      : "location",
+  };
+}
+
+/**
+ * Queries the SilverBullet index for all pages with a location frontmatter field
  * and returns them as parsed GeoPage objects.
  *
+ * @param locationKey - The frontmatter key to look for (from config, default: "location")
  * @returns Array of pages with valid geographic coordinates
  */
-async function queryGeoPages(): Promise<GeoPage[]> {
+async function queryGeoPages(locationKey: string): Promise<GeoPage[]> {
   const results = await system.invokeFunction("index.queryLuaObjects", "page", {}) as any[];
   const geoPages: GeoPage[] = [];
   for (const p of results) {
-    const loc = parseLocation(p.location);
+    const loc = parseLocation(p[locationKey]);
     if (loc) geoPages.push({ name: p.name, lat: loc.lat, lng: loc.lng });
   }
   return geoPages;
@@ -139,10 +155,11 @@ export async function mapWidget(
   }
 
   // Query pages with location frontmatter
+  const config = await getConfig();
   let geoPages: GeoPage[] = [];
   let debugError = "";
   try {
-    geoPages = await queryGeoPages();
+    geoPages = await queryGeoPages(config.frontMatterLocationKey);
   } catch (e) {
     debugError = String(e);
   }
