@@ -1,0 +1,21 @@
+function y(t){let e=atob(t),r=e.length,o=new Uint8Array(r);for(let n=0;n<r;n++)o[n]=e.charCodeAt(n);return o}function c(t){typeof t=="string"&&(t=new TextEncoder().encode(t));let e="",r=t.byteLength;for(let o=0;o<r;o++)e+=String.fromCharCode(t[o]);return btoa(e)}var C=new Uint8Array(16);var d=class{prefix;maxCaptureSize;originalConsole;logBuffer;constructor(e="",r=1e3){this.prefix=e,this.maxCaptureSize=r,this.logBuffer=[],this.prefix=e,this.originalConsole={log:console.log.bind(console),info:console.info.bind(console),warn:console.warn.bind(console),error:console.error.bind(console),debug:console.debug.bind(console)},this.patchConsole()}patchConsole(){let e=r=>(...o)=>{let n=this.prefix?[this.prefix,...o]:o;this.originalConsole[r](...n),this.captureLog(r,o)};console.log=e("log"),console.info=e("info"),console.warn=e("warn"),console.error=e("error"),console.debug=e("debug")}captureLog(e,r){let o={level:e,timestamp:Date.now(),message:r.map(n=>{if(typeof n=="string")return n;try{return JSON.stringify(n)}catch{return String(n)}}).join(" ")};this.logBuffer.push(o),this.logBuffer.length>this.maxCaptureSize&&this.logBuffer.shift()}async postToServer(e,r){if(this.logBuffer.length>0){let n=[...this.logBuffer];this.logBuffer=[];try{if(!(await fetch(e,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(n.map(s=>({...s,source:r})))})).ok)throw new Error("Failed to post logs to server")}catch(a){console.warn("Could not post logs to server",a.message),this.logBuffer.unshift(...n)}}}},f;function h(t=""){return f=new d(t),f}var i=t=>{throw new Error("Not initialized yet")},u=typeof window>"u"&&typeof globalThis.WebSocketPair>"u";typeof Deno>"u"&&(self.Deno={args:[],build:{arch:"x86_64"},env:{get(){}}});var p=new Map,l=0;u&&(globalThis.syscall=async(t,...e)=>await new Promise((r,o)=>{l++,p.set(l,{resolve:r,reject:o}),i({type:"sys",id:l,name:t,args:e})}));function g(t,e,r){u&&(i=r,self.addEventListener("message",o=>{(async()=>{let n=o.data;switch(n.type){case"inv":{let a=t[n.name];if(!a)throw new Error(`Function not loaded: ${n.name}`);try{let s=await Promise.resolve(a(...n.args||[]));i({type:"invr",id:n.id,result:s})}catch(s){console.error("An exception was thrown as a result of invoking function",n.name,"error:",s.message),i({type:"invr",id:n.id,error:s.message})}}break;case"sysr":{let a=n.id,s=p.get(a);if(!s)throw Error("Invalid request id");p.delete(a),n.error?s.reject(new Error(n.error)):s.resolve(n.result)}break}})().catch(console.error)}),i({type:"manifest",manifest:e}),h(`[${e.name} plug]`))}async function x(t,e){if(typeof t!="string"){let r=new Uint8Array(await t.arrayBuffer()),o=r.length>0?c(r):void 0;e={method:t.method,headers:Object.fromEntries(t.headers.entries()),base64Body:o},t=t.url}return syscall("sandboxFetch.fetch",t,e)}globalThis.nativeFetch=globalThis.fetch;function A(){globalThis.fetch=async function(t,e){let r=e&&e.body?c(new Uint8Array(await new Response(e.body).arrayBuffer())):void 0,o=await x(t,e&&{method:e.method,headers:e.headers,base64Body:r});return new Response(o.base64Body?y(o.base64Body):null,{status:o.status,headers:o.headers})}}u&&A();async function m(t,e){return{html:'<style>body,html{margin:0;padding:0;}#map{width:100%;height:400px;}</style><div id="map"></div>',script:`
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+
+      var s = document.createElement('script');
+      s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      s.onload = function() {
+        var map = L.map('map').setView([48.8566, 2.3522], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19
+        }).addTo(map);
+      };
+      s.onerror = function() {
+        document.getElementById('map').textContent = 'Failed to load Leaflet';
+      };
+      document.head.appendChild(s);
+    `,height:400}}var w={mapWidget:m},b={name:"geonotes",functions:{mapWidget:{path:"./geonotes.ts:mapWidget",codeWidget:"map"}},assets:{}},U={manifest:b,functionMapping:w};g(w,b,self.postMessage);export{U as plug};
+//# sourceMappingURL=geonotes.plug.js.map

@@ -1,0 +1,5 @@
+name: geonotes
+functions:
+  mapWidget:
+    path: ./geonotes.ts:mapWidget
+    codeWidget: map
