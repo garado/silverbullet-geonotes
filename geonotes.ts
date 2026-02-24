@@ -28,6 +28,7 @@ export async function mapWidget(
   let centerInfo: ReturnType<typeof parseCenter> = null;
   let zoom = 13;
   let height = 400;
+  let zoomControl = true;
 
   if (bodyText.trim()) {
     try {
@@ -35,6 +36,7 @@ export async function mapWidget(
       centerInfo = parseCenter(parsed.center);
       if (typeof parsed.zoom === "number") zoom = parsed.zoom;
       if (typeof parsed.height === "number") height = parsed.height;
+      if (typeof parsed.zoomControl === "boolean") zoomControl = parsed.zoomControl;
     } catch { /* use defaults */ }
   }
 
@@ -67,7 +69,7 @@ export async function mapWidget(
       var s = document.createElement('script');
       s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
       s.onload = function() {
-        var map = L.map('map');
+        var map = L.map('map',{zoomControl:${zoomControl}});
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 19
