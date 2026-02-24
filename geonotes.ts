@@ -29,6 +29,7 @@ export async function mapWidget(
   let zoom = 13;
   let height = 400;
   let zoomControl = true;
+  let style = "osm";
 
   if (bodyText.trim()) {
     try {
@@ -37,8 +38,17 @@ export async function mapWidget(
       if (typeof parsed.zoom === "number") zoom = parsed.zoom;
       if (typeof parsed.height === "number") height = parsed.height;
       if (typeof parsed.zoomControl === "boolean") zoomControl = parsed.zoomControl;
+      if (typeof parsed.style === "string") style = parsed.style;
     } catch { /* use defaults */ }
   }
+
+  const tiles: Record<string, { url: string; attribution: string; maxZoom: number }> = {
+    osm: { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors", maxZoom: 19 },
+    dark: { url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attribution: "&copy; OpenStreetMap contributors &copy; CARTO", maxZoom: 20 },
+    light: { url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", attribution: "&copy; OpenStreetMap contributors &copy; CARTO", maxZoom: 20 },
+    topo: { url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors &copy; OpenTopoMap", maxZoom: 17 },
+  };
+  const tile = tiles[style] ?? tiles.osm;
 
   // Build the setView call depending on center type
   let initView: string;
@@ -70,9 +80,9 @@ export async function mapWidget(
       s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
       s.onload = function() {
         var map = L.map('map',{zoomControl:${zoomControl}});
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 19
+        L.tileLayer(${JSON.stringify(tile.url)}, {
+          attribution: ${JSON.stringify(tile.attribution)},
+          maxZoom: ${tile.maxZoom}
         }).addTo(map);
         ${initView}
       };
