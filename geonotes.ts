@@ -252,13 +252,11 @@ async function applyQuery(items: GeoItem[], query: GeoQuery): Promise<GeoItem[]>
 export async function completeGeolink(
   { linePrefix, pos }: { linePrefix: string; pos: number },
 ): Promise<{ from: number; options: { label: string; detail: string; apply: string }[] } | null> {
-  // Cursor must be inside [ ... ] with nothing after it on this line yet
+  // Cursor must be inside [ ... ] of a geolink — find last [ with no ] before cursor
   const labelMatch = /\[([^\]]*)$/.exec(linePrefix);
   if (!labelMatch) return null;
 
-  console.debug("im in da info");
-
-  // Text after cursor must start with remaining label chars + ](geo:...)
+  // Text after cursor must complete the geolink: optional remaining label + ](geo:...)
   const fullText = await editor.getText();
   const afterCursor = fullText.slice(pos);
   const afterMatch = /^([^\]]*)\]\(geo:[^)]*\)/.exec(afterCursor);
@@ -276,22 +274,19 @@ export async function completeGeolink(
     );
     results = await resp.json();
   } catch (e) {
-    console.debug("fetch error:", e);
-    console.debug("catch: return null");
+    console.error("Nominatim fetch error:", e);
     return null;
   }
   if (!results.length) return null;
 
-  console.debug("results found", results);
-
   return {
-    from: pos - labelMatch[0].length, // position of the opening [
-    to: pos + afterMatch[0].length,   // consume the trailing ](geo:...)
+    from: pos - labelMatch[1].length, // position right after the opening [
+    to: pos + afterMatch[0].length,   // consume remaining label + ](geo:...)
     filter: false,
     options: results.map((r: any) => ({
       label: r.display_name,
       detail: `${r.lat}, ${r.lon}`,
-      apply: `[${r.name}](geo:${r.lat},${r.lon})`,
+      apply: `${r.name}](geo:${r.lat},${r.lon})`,
     })),
   };
 }
