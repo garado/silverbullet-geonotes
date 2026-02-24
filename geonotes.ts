@@ -1,5 +1,9 @@
-import { index, system } from "@silverbulletmd/silverbullet/syscalls";
+import { index, space, system } from "@silverbulletmd/silverbullet/syscalls";
 import { parse as parseYaml } from "@std/yaml";
+
+/********************************************************************************
+ * Types and interfaces
+ ********************************************************************************/
 
 /** A page with parsed geographic coordinates. */
 interface GeoPage {
@@ -17,6 +21,37 @@ interface GeoLink {
   lat: number;
   lng: number;
 }
+
+/** A unified geo item from either a geopage or geolink source. */
+interface GeoItem {
+  type: "page" | "link";
+  /** Display name: page name for geonotes, link label for geolinks. */
+  name: string;
+  /** Page containing this item (same as name for geonotes). */
+  page: string;
+  lat: number;
+  lng: number;
+}
+
+/**
+ * Query filters for geo items. All string values are JavaScript regex patterns.
+ * Multiple filters are ANDed together.
+ */
+interface GeoQuery {
+  /** Show items whose containing page is wiki-linked from pages matching this pattern. */
+  linkedFrom?: string;
+  /** Show items whose containing page has a wiki link to pages matching this pattern. */
+  linkedTo?: string;
+  /** Show items whose containing page path matches this pattern. */
+  path?: string;
+  /** Show items whose display name matches this pattern (page name or geolink label). */
+  name?: string;
+}
+
+
+/********************************************************************************
+ * Functions
+ ********************************************************************************/
 
 /**
  * Parses the `center` field from widget config.
@@ -69,6 +104,38 @@ function parseLocation(loc: unknown): { lat: number; lng: number } | null {
 }
 
 /**
+ * Compiles a pattern string into a RegExp.
+ * Bare `*` is treated as a glob wildcard (converted to `.*`);
+ * `*` already preceded by `.` is left alone so proper regex still works.
+ *
+ * @param pattern - Glob-style or regex pattern string
+ * @returns Compiled RegExp
+ */
+function makeRegex(pattern: string): RegExp {
+  const converted = pattern.replace(/\*/g, (m, offset, str) =>
+    offset > 0 && str[offset - 1] === "." ? m : ".*"
+  );
+  return new RegExp(converted);
+}
+
+/**
+ * Extracts wiki link targets from page content.
+ * Handles `[[Page]]`, `[[Page|alias]]`, and `[[Page#section]]` formats.
+ *
+ * @param text - Raw page content
+ * @returns Array of linked page names (unaliased, without anchors)
+ */
+function extractWikiLinks(text: string): string[] {
+  const links: string[] = [];
+  const re = /\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    links.push(m[1].trim());
+  }
+  return links;
+}
+
+/**
  * Reads geonotes configuration from the SilverBullet CONFIG page.
  * Users can configure via `config.set { geonote = { ... } }` in CONFIG.
  *
@@ -98,6 +165,76 @@ async function queryGeoPages(locationKey: string): Promise<GeoPage[]> {
     if (loc) geoPages.push({ name: p.name, lat: loc.lat, lng: loc.lng });
   }
   return geoPages;
+}
+
+/**
+ * Applies query filters to a list of unified geo items.
+ * All filter patterns are treated as JavaScript regular expressions.
+ * Multiple filters are ANDed together (all must match).
+ *
+ * - `path` — regex tested against the containing page path
+ * - `name` — regex tested against the display name (page name or geolink label)
+ * - `linkedFrom` — keeps items whose page is wiki-linked from pages matching the pattern
+ * - `linkedTo` — keeps items whose page wiki-links to pages matching the pattern
+ *
+ * @param items - Unified geo items to filter
+ * @param query - Query filter config
+ * @returns Filtered geo items
+ */
+async function applyQuery(items: GeoItem[], query: GeoQuery): Promise<GeoItem[]> {
+  let result = items;
+
+  if (query.path) {
+    const re = makeRegex(query.path);
+    result = result.filter((i) => re.test(i.page));
+  }
+
+  if (query.name) {
+    const re = makeRegex(query.name);
+    result = result.filter((i) => re.test(i.name));
+  }
+
+  if (query.linkedFrom) {
+    const sourceRe = makeRegex(query.linkedFrom);
+    // Find all pages whose name matches the pattern
+    const allPages = await system.invokeFunction("index.queryLuaObjects", "page", {}) as any[];
+    const sourcePageNames = (allPages as any[])
+      .map((p) => p.name as string)
+      .filter((n) => sourceRe.test(n));
+    // Read each source page and collect all wiki links from them
+    const linkedPageNames = new Set<string>();
+    for (const sourceName of sourcePageNames) {
+      try {
+        const { text } = await space.readPage(sourceName);
+        for (const link of extractWikiLinks(text)) {
+          linkedPageNames.add(link);
+        }
+      } catch { /* skip unreadable pages */ }
+    }
+    result = result.filter((i) => linkedPageNames.has(i.page));
+  }
+
+  if (query.linkedTo) {
+    const targetRe = makeRegex(query.linkedTo);
+    const allPages = await system.invokeFunction("index.queryLuaObjects", "page", {}) as any[];
+    const targetPageNames = new Set<string>(
+      (allPages as any[]).map((p) => p.name as string).filter((n) => targetRe.test(n)),
+    );
+    // For each unique geo page, check if it wiki-links to a target page
+    const uniqueGeoPageNames = [...new Set(result.map((i) => i.page))];
+    const geoPagesThatLinkToTarget = new Set<string>();
+    for (const geoPageName of uniqueGeoPageNames) {
+      try {
+        const { text } = await space.readPage(geoPageName);
+        if (extractWikiLinks(text).some((l) => targetPageNames.has(l))) {
+          geoPagesThatLinkToTarget.add(geoPageName);
+        }
+      } catch { /* skip unreadable pages */ }
+    }
+    result = result.filter((i) => geoPagesThatLinkToTarget.has(i.page));
+  }
+
+  return result;
 }
 
 /**
@@ -148,20 +285,25 @@ const TILES: Record<string, { url: string; attribution: string; maxZoom: number 
  * - `height` — Widget height in pixels (default: 400)
  * - `style` — Tile style: `osm`, `dark`, `light`, `topo` (default: `osm`)
  * - `zoomControl` — Show zoom buttons (default: true)
+ * - `path` — Regex: show items whose page path matches
+ * - `name` — Regex: show items whose display name matches
+ * - `linkedFrom` — Regex: show items wiki-linked from pages matching this pattern
+ * - `linkedTo` — Regex: show items whose page wiki-links to pages matching this pattern
  *
  * @param bodyText - Raw YAML string from inside the code fence
- * @param _pageName - Name of the page containing the widget
+ * @param pageName - Name of the page containing the widget
  * @returns Widget content with HTML, script, and height
  */
 export async function mapWidget(
   bodyText: string,
-  _pageName: string,
+  pageName: string,
 ): Promise<{ html: string; script: string; height: number }> {
   let centerInfo: ReturnType<typeof parseCenter> = null;
   let zoom = 13;
   let height = 400;
   let zoomControl = true;
   let style = "osm";
+  const query: GeoQuery = {};
 
   if (bodyText.trim()) {
     try {
@@ -171,6 +313,10 @@ export async function mapWidget(
       if (typeof parsed.height === "number") height = parsed.height;
       if (typeof parsed.zoomControl === "boolean") zoomControl = parsed.zoomControl;
       if (typeof parsed.style === "string") style = parsed.style;
+      if (typeof parsed.linkedFrom === "string") query.linkedFrom = parsed.linkedFrom;
+      if (typeof parsed.linkedTo === "string") query.linkedTo = parsed.linkedTo;
+      if (typeof parsed.path === "string") query.path = parsed.path;
+      if (typeof parsed.name === "string") query.name = parsed.name;
     } catch { /* use defaults */ }
   }
 
@@ -194,20 +340,32 @@ export async function mapWidget(
     initView = `map.setView([0,0],2);`;
   }
 
-  // Query pages with location frontmatter and indexed geolinks
+  // Build unified geo items from geonotes and geolinks, then apply query filters
   const config = await getConfig();
-  let geoPages: GeoPage[] = [];
-  let geoLinks: GeoLink[] = [];
+  let allItems: GeoItem[] = [];
   let debugError = "";
   try {
-    geoPages = await queryGeoPages(config.frontMatterLocationKey);
-    geoLinks = await index.queryLuaObjects<GeoLink>("geolink", {});
+    const geoPages = await queryGeoPages(config.frontMatterLocationKey);
+    const geoLinks = await index.queryLuaObjects<GeoLink>("geolink", {});
+    allItems = [
+      ...geoPages.map((p) => ({ type: "page" as const, name: p.name.split("/").pop() ?? p.name, page: p.name, lat: p.lat, lng: p.lng })),
+      ...geoLinks.map((l) => ({ type: "link" as const, name: l.name, page: l.page, lat: l.lat, lng: l.lng })),
+    ];
   } catch (e) {
     debugError = String(e);
   }
 
+  let filteredItems = allItems;
+  if (Object.keys(query).length > 0) {
+    try {
+      filteredItems = await applyQuery(allItems, query);
+    } catch (e) {
+      debugError += (debugError ? "\n" : "") + "query error: " + String(e);
+    }
+  }
+
   return {
-    html: `<style>body,html{margin:0;padding:0;}#map{width:100%;height:${height}px;}#debug{padding:8px;font-family:monospace;font-size:12px;white-space:pre;background:#1e1e1e;color:#d4d4d4;overflow:auto;max-height:300px;}</style><div id="map"></div><div id="debug">geo pages (${geoPages.length}): ${JSON.stringify(geoPages, null, 2).replace(/</g, '&lt;')}\n\ngeolinks (${geoLinks.length}): ${JSON.stringify(geoLinks, null, 2).replace(/</g, '&lt;')}${debugError ? '\nerror: ' + debugError : ''}</div>`,
+    html: `<style>body,html{margin:0;padding:0;}#map{width:100%;height:${height}px;}#debug{padding:8px;font-family:monospace;font-size:12px;white-space:pre;background:#1e1e1e;color:#d4d4d4;overflow:auto;max-height:300px;}</style><div id="map"></div><div id="debug">items (${filteredItems.length}/${allItems.length}): ${JSON.stringify(filteredItems, null, 2).replace(/</g, "&lt;")}${debugError ? "\nerror: " + debugError : ""}</div>`,
     script: `
       var link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -223,6 +381,8 @@ export async function mapWidget(
           maxZoom: ${tile.maxZoom}
         }).addTo(map);
         ${initView}
+        var markers = ${JSON.stringify(filteredItems.map((i) => [i.lat, i.lng]))};
+        markers.forEach(function(m) { L.marker(m).addTo(map); });
       };
       s.onerror = function() {
         document.getElementById('map').textContent = 'Failed to load Leaflet';
