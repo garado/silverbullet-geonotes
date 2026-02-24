@@ -1,4 +1,6 @@
 name: geonotes
+requiredPermissions:
+  - fetch
 functions:
   mapWidget:
     path: ./geonotes.ts:mapWidget
@@ -8,3 +10,8 @@ functions:
     path: ./geonotes.ts:indexGeoLinks
     events:
       - page:index
+
+  completeGeolink:
+    path: ./geonotes.ts:completeGeolink
+    events:
+      - editor:complete

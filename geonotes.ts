@@ -1,4 +1,4 @@
-import { index, space, system } from "@silverbulletmd/silverbullet/syscalls";
+import { editor, index, space, system } from "@silverbulletmd/silverbullet/syscalls";
 import { parse as parseYaml } from "@std/yaml";
 
 /********************************************************************************
@@ -235,6 +235,65 @@ async function applyQuery(items: GeoItem[], query: GeoQuery): Promise<GeoItem[]>
   }
 
   return result;
+}
+
+/**
+ * Completion handler for geolinks. Triggers when the cursor is inside the
+ * label of a `[label](geo:)` link and searches Nominatim with the full label
+ * text, returning up to 5 place suggestions.
+ *
+ * Selecting a result replaces the entire `[label](geo:)` with
+ * `[display name](geo:lat,lon)` using the `to` field to extend the replacement
+ * range beyond the cursor.
+ *
+ * @param context - Completion context with linePrefix text and cursor position
+ * @returns Completion options with from/to range, or null if not in a geolink
+ */
+export async function completeGeolink(
+  { linePrefix, pos }: { linePrefix: string; pos: number },
+): Promise<{ from: number; options: { label: string; detail: string; apply: string }[] } | null> {
+  // Cursor must be inside [ ... ] with nothing after it on this line yet
+  const labelMatch = /\[([^\]]*)$/.exec(linePrefix);
+  if (!labelMatch) return null;
+
+  console.debug("im in da info");
+
+  // Text after cursor must start with remaining label chars + ](geo:...)
+  const fullText = await editor.getText();
+  const afterCursor = fullText.slice(pos);
+  const afterMatch = /^([^\]]*)\]\(geo:[^)]*\)/.exec(afterCursor);
+  if (!afterMatch) return null;
+
+  // Combine label text from both sides of the cursor
+  const fullLabel = (labelMatch[1] + afterMatch[1]).trim();
+  if (fullLabel.length < 2) return null;
+
+  let results: any[];
+  try {
+    const resp = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(fullLabel)}`,
+      { headers: { "User-Agent": "SilverBullet-GeoNotes/1.0" } },
+    );
+    results = await resp.json();
+  } catch (e) {
+    console.debug("fetch error:", e);
+    console.debug("catch: return null");
+    return null;
+  }
+  if (!results.length) return null;
+
+  console.debug("results found", results);
+
+  return {
+    from: pos - labelMatch[0].length, // position of the opening [
+    to: pos + afterMatch[0].length,   // consume the trailing ](geo:...)
+    filter: false,
+    options: results.map((r: any) => ({
+      label: r.display_name,
+      detail: `${r.lat}, ${r.lon}`,
+      apply: `[${r.name}](geo:${r.lat},${r.lon})`,
+    })),
+  };
 }
 
 /**
