@@ -398,7 +398,7 @@ function markerJS(marker: MarkerConfig): string {
   return `
     var _markerCfg = ${JSON.stringify(marker)};
     function makeMarker(lat, lng) {
-      var iconName  = _markerCfg.icon || 'map-pin';
+      var iconName  = _markerCfg.icon || 'circle';
       var color     = _markerCfg.markerColor || '#bf616a';
       var iconColor = _markerCfg.iconColor || '#efeff4';
       var shape     = _markerCfg.shape || 'pin';
@@ -406,25 +406,41 @@ function markerJS(marker: MarkerConfig): string {
 
       // Shape styles: the container div + optional tail for pin
       var shapeStyle, size, anchor, tail = '';
+      var commonStyle = 'display:flex;align-items:center;justify-content:center;background:' + color + ';';
+      var innerStyle = 'transform:rotate(0deg);';
+
       if (shape === 'circle') {
         size = [32, 32]; anchor = [16, 16];
-        shapeStyle = 'width:32px;height:32px;border-radius:50%;background:' + color + ';display:flex;align-items:center;justify-content:center;';
+        shapeStyle = commonStyle + 'width:32px;height:32px;border-radius:50%;';
+      
       } else if (shape === 'square') {
         size = [32, 32]; anchor = [16, 16];
-        shapeStyle = 'width:32px;height:32px;border-radius:4px;background:' + color + ';display:flex;align-items:center;justify-content:center;';
+        shapeStyle = commonStyle + 'width:32px;height:32px;border-radius:4px;';
+      
       } else if (shape === 'diamond') {
         size = [36, 36]; anchor = [18, 18];
-        shapeStyle = 'width:32px;height:32px;background:' + color + ';display:flex;align-items:center;justify-content:center;';
+        shapeStyle = commonStyle + 'width:26px;height:26px;';
+        shapeStyle += 'transform:rotate(45deg);';
+        innerStyle = 'transform:rotate(-45deg);';
+
       } else {
-        // pin (default): rounded top, pointed bottom
-        size = [32, 42]; anchor = [16, 42];
-        shapeStyle = 'width:32px;height:32px;border-radius:50% 50% 50% 0;background:' + color + ';display:flex;align-items:center;justify-content:center;';
+        // pin (default)
+        size = [32, 32]; 
+        anchor = [16, 32]; // Centers horizontally (16), points to bottom (32)
+        
+        shapeStyle = commonStyle + 'width:32px;height:32px;border-radius:50% 50% 50% 0;';
+        shapeStyle += 'display:flex;align-items:center;justify-content:center;';
+        shapeStyle += 'transform:rotate(-45deg);';
+        
+        // Rotate the icon back so it sits upright
+        innerStyle = 'transform:rotate(45deg);display:flex;';
       }
 
       var iconStyle = 'color:' + iconColor + ';font-size:16px;';
 
       var html = '<div style="opacity:' + opacity + ';filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))">'
                + '<div style="' + shapeStyle + '">'
+               + '<div style="' + innerStyle + '">'
                + '<i class="ph-fill ph-' + iconName + '" style="' + iconStyle + '"></i>'
                + '</div></div>';
 
