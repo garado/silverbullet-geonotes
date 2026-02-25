@@ -1,2 +1,12 @@
 /* Geonotes plug styles */
 
+/* Remove the "copy" button on embedded maps */
+.cm-line.sb-fenced-code-iframe.sb-line-fenced-code.cm-line:has(iframe[geonote-embedded-map="true"]) .sb-actions {
+  display: none !important;
+}
+
+/* Remove iframe padding so map is flush with the content edges */
+.cm-line.sb-line-fenced-code:has([geonote-embedded-map="true"]) {
+  padding-left: 0px !important;
+  padding-right: 0px !important;
+}

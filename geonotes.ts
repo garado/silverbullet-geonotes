@@ -541,8 +541,65 @@ export async function mapWidget(
   }
 
   return {
-    html: `<style>body,html{}#map{width:100%;height:${height}px;}#debug{padding:8px;font-family:monospace;font-size:12px;white-space:pre;background:#1e1e1e;color:#d4d4d4;overflow:auto;max-height:300px;}</style><div id="map"></div><div id="debug">items (${filteredItems.length}/${allItems.length}): ${JSON.stringify(filteredItems, null, 2).replace(/</g, "&lt;")}${debugError ? "\nerror: " + debugError : ""}</div>`,
+    html: `<style>
+      body, html { 
+        margin: 0; 
+        padding: 0; 
+        overflow: hidden; 
+      }
+      #map { 
+        width: 100%; 
+        height: ${height}px; 
+      }
+      #debug { 
+        padding: 8px; 
+        font-family: monospace; 
+        font-size: 12px; 
+        white-space: pre; 
+        background: #1e1e1e; 
+        color: #d4d4d4; 
+        overflow: auto; 
+        max-height: 300px; 
+      }
+    </style>
+    <div id="map"></div>
+    <div id="debug">
+      <summary>debug</summary>
+      <details>
+      ${filteredItems.length}/${allItems.length}): ${JSON.stringify(filteredItems, null, 2).replace(/</g, "&lt;")}
+      </details>
+    </div>`,
     script: `
+      // --- FLAG PARENT START ---
+      // some weird hacky shit to add an attribute to the iframe containing the map
+      try {
+        // Find the iframe we are currently in
+        var frame = window.parent.document.querySelector('sb-fenced-code-iframe');
+        // Look for a frame that contains THIS specific window
+        var allFrames = window.parent.document.body.querySelectorAll('*');
+        console.log("Total elements found:", allFrames.length);
+        console.log("the fuck");
+        for (var i = 0; i < allFrames.length; i++) {
+          if (allFrames[i].contentWindow === window) {
+            console.log("the fuck");
+            allFrames[i].setAttribute('geonote-embedded-map', 'true');
+            break;
+          }
+        }
+      } catch(e) { console.error("Could not flag parent", e); }
+      // --- FLAG PARENT END ---
+
+      try {
+        var _css = ${JSON.stringify(await asset.readAsset("geonotes", "assets/geonotes.css"))};
+        var _style = window.parent.document.getElementById('sb-geonotes-style');
+        if (!_style) {
+          _style = window.parent.document.createElement('style');
+          _style.id = 'sb-geonotes-style';
+          window.parent.document.head.appendChild(_style);
+        }
+        _style.textContent = _css;
+      } catch(_e) {}
+
       var link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
