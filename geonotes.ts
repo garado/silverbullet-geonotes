@@ -12,7 +12,7 @@
  * Imports
  ********************************************************************************/
 
-import { editor, index, space, system } from "@silverbulletmd/silverbullet/syscalls";
+import { asset, editor, index, space, system } from "@silverbulletmd/silverbullet/syscalls";
 import { parse as parseYaml } from "@std/yaml";
 
 /********************************************************************************

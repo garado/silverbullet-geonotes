@@ -1,6 +1,8 @@
 name: geonotes
 requiredPermissions:
   - fetch
+assets:
+  - assets/**/*.*
 functions:
   mapWidget:
     path: ./geonotes.ts:mapWidget
