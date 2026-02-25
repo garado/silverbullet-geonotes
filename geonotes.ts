@@ -552,24 +552,17 @@ export async function mapWidget(
         width: 100%;
         height: ${height}px;
       }
-      #debug { 
-        padding: 8px; 
-        font-family: monospace; 
-        font-size: 12px; 
-        white-space: pre; 
-        background: #1e1e1e; 
-        color: #d4d4d4; 
-        overflow: auto; 
-        max-height: 300px; 
-      }
     </style>
-    <div id="map"></div>
-    <div id="debug">
-      <summary>debug</summary>
-      <details>
-      ${filteredItems.length}/${allItems.length}): ${JSON.stringify(filteredItems, null, 2).replace(/</g, "&lt;")}
-      </details>
-    </div>`,
+    <div id="map"></div>`,
+
+    // DEBUG (shows results of all queries, and how many geoitems were found)
+    // <div id="debug">
+    //   <summary>debug</summary>
+    //   <details>
+    //   (${filteredItems.length}/${allItems.length}): ${JSON.stringify(filteredItems, null, 2).replace(/</g, "&lt;")}
+    //   </details>
+    // </div>`,
+
     script: `
       // --- FLAG PARENT START ---
       // some weird hacky shit to add an attribute to the iframe containing the map

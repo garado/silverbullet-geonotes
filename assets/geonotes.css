@@ -31,3 +31,15 @@
 }
 .leaflet-popup-content a.nav:hover { text-decoration: underline; }
 .leaflet-close-button { color: var(--subtle-color) !important; }
+
+
+#debug { 
+  padding: 8px; 
+  font-family: monospace; 
+  font-size: 12px; 
+  white-space: pre; 
+  background: #1e1e1e; 
+  color: #d4d4d4; 
+  overflow: auto; 
+  max-height: 300px; 
+}
