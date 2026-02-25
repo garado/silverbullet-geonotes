@@ -1,5 +1,32 @@
+/**
+ * █▀ █ █░░ █░█ █▀▀ █▀█ █▄▄ █░█ █░░ █░░ █▀▀ ▀█▀   █▀▄▀█ ▄▀█ █▀█   █░█ █ █▀▀ █░█░█
+ * ▄█ █ █▄▄ ▀▄▀ ██▄ █▀▄ █▄█ █▄█ █▄▄ █▄▄ ██▄ ░█░   █░▀░█ █▀█ █▀▀   ▀▄▀ █ ██▄ ▀▄▀▄▀
+ *
+ * Like Obsidian Map View, but for Silverbullet!
+ *
+ * Full credit to esm7 for their awesome work. This is essentially just porting it to 
+ * a different platform, with some little changes. https://github.com/esm7/obsidian-map-view
+ */
+
+/********************************************************************************
+ * Imports
+ ********************************************************************************/
+
 import { editor, index, space, system } from "@silverbulletmd/silverbullet/syscalls";
 import { parse as parseYaml } from "@std/yaml";
+
+/********************************************************************************
+ * Constants
+ ********************************************************************************/
+
+/** Available map tile styles. */
+const TILES: Record<string, { url: string; attribution: string; maxZoom: number }> = {
+  osm: { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors", maxZoom: 19 },
+  dark: { url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attribution: "&copy; OpenStreetMap contributors &copy; CARTO", maxZoom: 20 },
+  light: { url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", attribution: "&copy; OpenStreetMap contributors &copy; CARTO", maxZoom: 20 },
+  topo: { url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors &copy; OpenTopoMap", maxZoom: 17 },
+};
+
 
 /********************************************************************************
  * Types and interfaces
@@ -321,13 +348,6 @@ export async function indexGeoLinks(
   await index.indexObjects(name, objects);
 }
 
-/** Available map tile styles. */
-const TILES: Record<string, { url: string; attribution: string; maxZoom: number }> = {
-  osm: { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors", maxZoom: 19 },
-  dark: { url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attribution: "&copy; OpenStreetMap contributors &copy; CARTO", maxZoom: 20 },
-  light: { url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", attribution: "&copy; OpenStreetMap contributors &copy; CARTO", maxZoom: 20 },
-  topo: { url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors &copy; OpenTopoMap", maxZoom: 17 },
-};
 
 /**
  * SilverBullet code widget handler for ```map fences.
@@ -419,7 +439,7 @@ export async function mapWidget(
   }
 
   return {
-    html: `<style>body,html{margin:0;padding:0;}#map{width:100%;height:${height}px;}#debug{padding:8px;font-family:monospace;font-size:12px;white-space:pre;background:#1e1e1e;color:#d4d4d4;overflow:auto;max-height:300px;}</style><div id="map"></div><div id="debug">items (${filteredItems.length}/${allItems.length}): ${JSON.stringify(filteredItems, null, 2).replace(/</g, "&lt;")}${debugError ? "\nerror: " + debugError : ""}</div>`,
+    html: `<style>body,html{}#map{width:100%;height:${height}px;}#debug{padding:8px;font-family:monospace;font-size:12px;white-space:pre;background:#1e1e1e;color:#d4d4d4;overflow:auto;max-height:300px;}</style><div id="map"></div><div id="debug">items (${filteredItems.length}/${allItems.length}): ${JSON.stringify(filteredItems, null, 2).replace(/</g, "&lt;")}${debugError ? "\nerror: " + debugError : ""}</div>`,
     script: `
       var link = document.createElement('link');
       link.rel = 'stylesheet';
