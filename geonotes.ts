@@ -541,15 +541,16 @@ export async function mapWidget(
   }
 
   return {
-    html: `<style>
-      body, html { 
-        margin: 0; 
-        padding: 0; 
-        overflow: hidden; 
+    html: `<link rel="stylesheet" href="/.client/main.css">
+    <style>${await asset.readAsset("geonotes", "assets/geonotes.css")}
+      body, html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
       }
-      #map { 
-        width: 100%; 
-        height: ${height}px; 
+      #map {
+        width: 100%;
+        height: ${height}px;
       }
       #debug { 
         padding: 8px; 
@@ -619,7 +620,24 @@ export async function mapWidget(
         }).addTo(map);
         ${initView}
         var items = ${JSON.stringify(filteredItems)};
-        items.forEach(function(item) { makeMarker(item.lat, item.lng).addTo(map); });
+        var latLngs = [];
+        items.forEach(function(item) {
+          var marker = makeMarker(item.lat, item.lng);
+          var popup = L.popup().setContent(
+            '<b>' + item.name + '</b><br><a class="nav" href="#">Open \u2197</a>'
+          );
+          marker.bindPopup(popup);
+          marker.on('popupopen', function() {
+            popup.getElement().querySelector('.nav').addEventListener('click', function(e) {
+              e.preventDefault();
+              syscall('editor.navigate', {page: item.page});
+            });
+          });
+          marker.addTo(map);
+          latLngs.push([item.lat, item.lng]);
+        });
+        if (latLngs.length === 1) { map.setView(latLngs[0], 13); }
+        else if (latLngs.length > 1) { map.fitBounds(latLngs, {padding: [40, 40]}); }
       };
       s.onerror = function() {
         document.getElementById('map').textContent = 'Failed to load Leaflet';
