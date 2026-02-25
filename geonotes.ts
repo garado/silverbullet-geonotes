@@ -543,14 +543,15 @@ export async function mapWidget(
   return {
     html: `<link rel="stylesheet" href="/.client/main.css">
     <style>${await asset.readAsset("geonotes", "assets/geonotes.css")}
-      body, html {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        height: ${height}px !important;
+        overflow: hidden !important;
       }
       #map {
         width: 100%;
-        height: ${height}px;
+        height: 100%;
       }
     </style>
     <div id="map"></div>`,
