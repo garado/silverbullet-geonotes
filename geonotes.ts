@@ -60,6 +60,15 @@ interface GeoItem {
   lng: number;
 }
 
+/** Marker appearance config from the CONFIG `geonote.markers` array. */
+interface MarkerConfig {
+  icon?: string;        // Phosphor icon name, e.g. "map-pin"
+  markerColor?: string; // CSS color for the shape background
+  iconColor?: string;   // CSS color for the icon (default: white)
+  shape?: "pin" | "circle" | "square" | "diamond"; // default: "pin"
+  opacity?: number;     // 0–1
+}
+
 /**
  * Query filters for geo items. All string values are JavaScript regex patterns.
  * Multiple filters are ANDed together.
@@ -168,12 +177,24 @@ function extractWikiLinks(text: string): string[] {
  *
  * @returns Parsed geonotes config with defaults applied
  */
-async function getConfig(): Promise<{ frontMatterLocationKey: string }> {
+async function getConfig(): Promise<{ frontMatterLocationKey: string; marker: MarkerConfig }> {
   const raw = await system.getConfig("geonote", {}) as Record<string, unknown>;
+  let marker: MarkerConfig = {};
+  if (Array.isArray(raw.markers) && raw.markers.length > 0) {
+    const m = raw.markers[0] as Record<string, unknown>;
+    marker = {
+      icon: typeof m.icon === "string" ? m.icon : undefined,
+      markerColor: typeof m.markerColor === "string" ? m.markerColor : undefined,
+      iconColor: typeof m.iconColor === "string" ? m.iconColor : undefined,
+      shape: typeof m.shape === "string" ? m.shape as MarkerConfig["shape"] : undefined,
+      opacity: typeof m.opacity === "number" ? m.opacity : undefined,
+    };
+  }
   return {
     frontMatterLocationKey: typeof raw.frontMatterLocationKey === "string"
       ? raw.frontMatterLocationKey
       : "location",
+    marker,
   };
 }
 
@@ -370,6 +391,51 @@ export async function indexGeoLinks(
 
 
 /**
+ * Returns inline JS that defines `makeMarker(lat, lng)` using Phosphor icons.
+ * Requires Leaflet and @phosphor-icons/web to already be loaded.
+ */
+function markerJS(marker: MarkerConfig): string {
+  return `
+    var _markerCfg = ${JSON.stringify(marker)};
+    function makeMarker(lat, lng) {
+      var iconName  = _markerCfg.icon || 'map-pin';
+      var color     = _markerCfg.markerColor || '#bf616a';
+      var iconColor = _markerCfg.iconColor || '#efeff4';
+      var shape     = _markerCfg.shape || 'pin';
+      var opacity   = _markerCfg.opacity !== undefined ? _markerCfg.opacity : 1;
+
+      // Shape styles: the container div + optional tail for pin
+      var shapeStyle, size, anchor, tail = '';
+      if (shape === 'circle') {
+        size = [32, 32]; anchor = [16, 16];
+        shapeStyle = 'width:32px;height:32px;border-radius:50%;background:' + color + ';display:flex;align-items:center;justify-content:center;';
+      } else if (shape === 'square') {
+        size = [32, 32]; anchor = [16, 16];
+        shapeStyle = 'width:32px;height:32px;border-radius:4px;background:' + color + ';display:flex;align-items:center;justify-content:center;';
+      } else if (shape === 'diamond') {
+        size = [36, 36]; anchor = [18, 18];
+        shapeStyle = 'width:32px;height:32px;background:' + color + ';display:flex;align-items:center;justify-content:center;';
+      } else {
+        // pin (default): rounded top, pointed bottom
+        size = [32, 42]; anchor = [16, 42];
+        shapeStyle = 'width:32px;height:32px;border-radius:50% 50% 50% 0;background:' + color + ';display:flex;align-items:center;justify-content:center;';
+      }
+
+      var iconStyle = 'color:' + iconColor + ';font-size:16px;';
+
+      var html = '<div style="opacity:' + opacity + ';filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))">'
+               + '<div style="' + shapeStyle + '">'
+               + '<i class="ph-fill ph-' + iconName + '" style="' + iconStyle + '"></i>'
+               + '</div></div>';
+
+      return L.marker([lat, lng], {
+        icon: L.divIcon({ html: html, className: '', iconSize: size, iconAnchor: anchor, popupAnchor: [0, -size[1]] }),
+      });
+    }
+  `;
+}
+
+/**
  * SilverBullet code widget handler for ```map fences.
  * Renders an interactive Leaflet map with configurable center, zoom, style, and markers.
  *
@@ -416,7 +482,7 @@ export async function mapWidget(
 
   const tile = TILES[style] ?? TILES.osm;
 
-  // Build the setView call depending on center type
+  // Build the setView call dependening on center type
   let initView: string;
   if (centerInfo?.type === "coords") {
     initView = `map.setView([${centerInfo.lat},${centerInfo.lng}],${zoom});`;
@@ -466,17 +532,22 @@ export async function mapWidget(
       link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
       document.head.appendChild(link);
 
+      var ph = document.createElement('script');
+      ph.src = 'https://unpkg.com/@phosphor-icons/web';
+      document.head.appendChild(ph);
+
       var s = document.createElement('script');
       s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
       s.onload = function() {
+        ${markerJS(config.marker)}
         var map = L.map('map',{zoomControl:${zoomControl}});
         L.tileLayer(${JSON.stringify(tile.url)}, {
           attribution: ${JSON.stringify(tile.attribution)},
           maxZoom: ${tile.maxZoom}
         }).addTo(map);
         ${initView}
-        var markers = ${JSON.stringify(filteredItems.map((i) => [i.lat, i.lng]))};
-        markers.forEach(function(m) { L.marker(m).addTo(map); });
+        var items = ${JSON.stringify(filteredItems)};
+        items.forEach(function(item) { makeMarker(item.lat, item.lng).addTo(map); });
       };
       s.onerror = function() {
         document.getElementById('map').textContent = 'Failed to load Leaflet';
