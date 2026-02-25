@@ -11,6 +11,11 @@ functions:
     events:
       - page:index
 
+  geoLinkClick:
+    path: ./geonotes.ts:geoLinkClick
+    events:
+      - page:click
+
   completeGeolink:
     path: ./geonotes.ts:completeGeolink
     events:

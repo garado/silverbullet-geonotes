@@ -265,6 +265,26 @@ async function applyQuery(items: GeoItem[], query: GeoQuery): Promise<GeoItem[]>
 }
 
 /**
+ * Click handler for geolinks. Navigates to the SilverBullet page named after
+ * the link label for any `[label](geo:...)` link, regardless of coordinates.
+ */
+export async function geoLinkClick(
+  { pos, parentNodes, altKey }: { pos: number; parentNodes: string[]; altKey?: boolean },
+): Promise<void> {
+  if (altKey) return;
+  if (!parentNodes.includes("Link")) return;
+  const text = await editor.getText();
+  const re = /\[([^\]]+)\]\(geo:[^)]*\)/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    if (pos >= match.index && pos <= match.index + match[0].length) {
+      await editor.navigate(match[1]);
+      return;
+    }
+  }
+}
+
+/**
  * Completion handler for geolinks. Triggers when the cursor is inside the
  * label of a `[label](geo:)` link and searches Nominatim with the full label
  * text, returning up to 5 place suggestions.
