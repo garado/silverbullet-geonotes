@@ -22,9 +22,9 @@ import { parse as parseYaml } from "@std/yaml";
 /** Available map tile styles. */
 const TILES: Record<string, { url: string; attribution: string; maxZoom: number }> = {
   osm: { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors", maxZoom: 19 },
-  dark: { url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attribution: "&copy; OpenStreetMap contributors &copy; CARTO", maxZoom: 20 },
-  light: { url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", attribution: "&copy; OpenStreetMap contributors &copy; CARTO", maxZoom: 20 },
-  topo: { url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors &copy; OpenTopoMap", maxZoom: 17 },
+  dark: { url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", maxZoom: 20 },
+  light: { url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", maxZoom: 20 },
+  topo: { url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", maxZoom: 17 },
 };
 
 
@@ -615,7 +615,6 @@ export async function mapWidget(
         ${markerJS(config.marker)}
         var map = L.map('map',{zoomControl:${zoomControl}});
         L.tileLayer(${JSON.stringify(tile.url)}, {
-          attribution: ${JSON.stringify(tile.attribution)},
           maxZoom: ${tile.maxZoom}
         }).addTo(map);
         ${initView}
