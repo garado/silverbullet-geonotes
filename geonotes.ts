@@ -47,6 +47,7 @@ interface GeoLink {
   name: string;
   lat: number;
   lng: number;
+  tags: string[];
 }
 
 /** A unified geo item from either a geopage or geolink source. */
@@ -58,6 +59,7 @@ interface GeoItem {
   page: string;
   lat: number;
   lng: number;
+  tags: string[];
 }
 
 /** Marker appearance config from the CONFIG `geonote.markers` array. */
@@ -82,6 +84,8 @@ interface GeoQuery {
   path?: string;
   /** Show items whose display name matches this pattern (page name or geolink label). */
   name?: string;
+  /** Show items that have this tag (exact match). */
+  tag?: string;
 }
 
 
@@ -242,6 +246,10 @@ async function applyQuery(items: GeoItem[], query: GeoQuery): Promise<GeoItem[]>
     result = result.filter((i) => re.test(i.name));
   }
 
+  if (query.tag) {
+    result = result.filter((i) => i.tags.includes(query.tag!));
+  }
+
   if (query.linkedFrom) {
     const sourceRe = makeRegex(query.linkedFrom);
     // Find all pages whose name matches the pattern
@@ -370,12 +378,13 @@ export async function indexGeoLinks(
   { name, text }: { name: string; text: string },
 ): Promise<void> {
   const objects: GeoLink[] = [];
-  const regex = /\[([^\]]*)\]\(geo:([^,)]+),([^)]+)\)/g;
+  const regex = /\[([^\]]*)\]\(geo:([^,)]+),([^)]+)\)((?:\s+#[\w/-]+)*)/g;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
     const lat = Number(match[2].trim());
     const lng = Number(match[3].trim());
     if (isFinite(lat) && isFinite(lng)) {
+      const tags = (match[4] ?? "").match(/#[\w/-]+/g)?.map((t) => t.slice(1)) ?? [];
       objects.push({
         ref: `${name}@${match.index}`,
         tag: "geolink",
@@ -383,6 +392,7 @@ export async function indexGeoLinks(
         name: match[1] || `${lat}, ${lng}`,
         lat,
         lng,
+        tags,
       });
     }
   }
@@ -493,6 +503,7 @@ export async function mapWidget(
       if (typeof parsed.linkedTo === "string") query.linkedTo = parsed.linkedTo;
       if (typeof parsed.path === "string") query.path = parsed.path;
       if (typeof parsed.name === "string") query.name = parsed.name;
+      if (typeof parsed.tag === "string") query.tag = parsed.tag;
     } catch { /* use defaults */ }
   }
 
@@ -524,8 +535,8 @@ export async function mapWidget(
     const geoPages = await queryGeoPages(config.frontMatterLocationKey);
     const geoLinks = await index.queryLuaObjects<GeoLink>("geolink", {});
     allItems = [
-      ...geoPages.map((p) => ({ type: "page" as const, name: p.name.split("/").pop() ?? p.name, page: p.name, lat: p.lat, lng: p.lng })),
-      ...geoLinks.map((l) => ({ type: "link" as const, name: l.name, page: l.page, lat: l.lat, lng: l.lng })),
+      ...geoPages.map((p) => ({ type: "page" as const, name: p.name.split("/").pop() ?? p.name, page: p.name, lat: p.lat, lng: p.lng, tags: [] })),
+      ...geoLinks.map((l) => ({ type: "link" as const, name: l.name, page: l.page, lat: l.lat, lng: l.lng, tags: l.tags ?? [] })),
     ];
   } catch (e) {
     debugError = String(e);
