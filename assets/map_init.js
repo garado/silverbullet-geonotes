@@ -124,9 +124,27 @@
       )
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          if (data.length > 0) {
-            map.setView([parseFloat(data[0].lat), parseFloat(data[0].lon)], cfg.center.zoom);
-          }
+          if (data.length === 0) return;
+          map.setView([parseFloat(data[0].lat), parseFloat(data[0].lon)], cfg.center.zoom);
+
+          // Replace the place-name in the fence with the resolved coordinates so
+          // future loads skip this geocoding round-trip entirely.
+          var coords = data[0].lat + ', ' + data[0].lon;
+          var escapedName = cfg.center.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          var re = new RegExp('([ \\t]*center:[ \\t]*)["\']?' + escapedName + '["\']?');
+          syscall('editor.getText').then(function (pageText) {
+            var newText = pageText.replace(re, '$1' + coords);
+            if (newText === pageText) return;
+            // Find the minimal changed slice to use replaceRange
+            var from = 0;
+            while (from < pageText.length && pageText[from] === newText[from]) from++;
+            var oldEnd = pageText.length;
+            var newEnd = newText.length;
+            while (oldEnd > from && newEnd > from && pageText[oldEnd - 1] === newText[newEnd - 1]) {
+              oldEnd--; newEnd--;
+            }
+            syscall('editor.replaceRange', from, oldEnd, newText.slice(from, newEnd));
+          });
         });
     } else {
       map.setView([0, 0], 2);
