@@ -7,7 +7,7 @@
  *
  * Data contract (geo-data JSON):
  *   items       – GeoItem[]
- *   tile        – { url, maxZoom }
+ *   tile        – { url, maxZoom } | { auto: true, light: {url,maxZoom}, dark: {url,maxZoom} }
  *   zoomControl – boolean
  *   center      – { type: "coords", lat, lng, zoom }
  *               | { type: "name",   name, zoom }
@@ -126,7 +126,12 @@
 
     // --- MAP INIT ---
     var map = L.map('map', { zoomControl: cfg.zoomControl });
-    L.tileLayer(cfg.tile.url, { maxZoom: cfg.tile.maxZoom }).addTo(map);
+    var tile = cfg.tile.auto
+      ? (window.parent.document.documentElement.getAttribute('data-theme') === 'dark'
+          ? cfg.tile.dark
+          : cfg.tile.light)
+      : cfg.tile;
+    L.tileLayer(tile.url, { maxZoom: tile.maxZoom }).addTo(map);
 
     if (cfg.center.type === 'coords') {
       map.setView([cfg.center.lat, cfg.center.lng], cfg.center.zoom);

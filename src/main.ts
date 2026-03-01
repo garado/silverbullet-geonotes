@@ -190,7 +190,9 @@ export async function mapWidget(
     } catch { /* use defaults */ }
   }
 
-  const tile = TILES[style] ?? TILES.osm;
+  const tile = style === "auto"
+    ? { auto: true, light: TILES.light, dark: TILES.dark }
+    : (TILES[style] ?? TILES.osm);
 
   // Normalise center into the JSON shape consumed by map_init.js
   type CenterData =
