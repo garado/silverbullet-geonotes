@@ -5,20 +5,20 @@ assets:
   - assets/**/*.*
 functions:
   mapWidget:
-    path: ./geonotes.ts:mapWidget
+    path: ./src/main.ts:mapWidget
     codeWidget: map
 
   indexGeoLinks:
-    path: ./geonotes.ts:indexGeoLinks
+    path: ./src/main.ts:indexGeoLinks
     events:
       - page:index
 
   geoLinkClick:
-    path: ./geonotes.ts:geoLinkClick
+    path: ./src/main.ts:geoLinkClick
     events:
       - page:click
 
   completeGeolink:
-    path: ./geonotes.ts:completeGeolink
+    path: ./src/main.ts:completeGeolink
     events:
       - editor:complete

@@ -1,5 +1,21 @@
-# SilverBullet plug template
-Insert your plug description here. 
+
+# Silverbullet Map View
+
+Like Obsidian Map View, but for Silverbullet.
+
+## Development
+
+If you're on Nix, you can enter devshell w/ dependencies:
+
+```nix
+nix develop
+```
+
+To build:
+
+```
+deno task build
+```
 
 ## Development preparation
 1. In your (development) space, create a folder under `Library/` that you can use as a namespace, for instance using your Github username:
