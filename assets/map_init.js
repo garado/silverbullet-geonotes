@@ -12,7 +12,7 @@
  *   center      – { type: "coords", lat, lng, zoom }
  *               | { type: "name",   name, zoom }
  *               | { type: "none" }
- *   marker      – MarkerConfig (icon, markerColor, iconColor, shape, opacity)
+ *   markers     – MarkerConfig[] (ordered rules; first with matching tag wins, then first without tag)
  *   css         – geonotes.css string (injected into parent document)
  */
 (function () {
@@ -57,12 +57,25 @@
   s.onload = function () {
 
     // --- MAKE MARKER ---
-    function makeMarker(lat, lng) {
-      var iconName  = cfg.marker.icon        || 'circle';
-      var color     = cfg.marker.markerColor || '#bf616a';
-      var iconColor = cfg.marker.iconColor   || '#efeff4';
-      var shape     = cfg.marker.shape       || 'pin';
-      var opacity   = cfg.marker.opacity !== undefined ? cfg.marker.opacity : 1;
+    // Returns the first marker rule whose tag matches one of the item's tags,
+    // falling back to the first rule with no tag, then an empty object.
+    function resolveMarker(item) {
+      var rules = cfg.markers;
+      for (var i = 0; i < rules.length; i++) {
+        if (rules[i].tag && item.tags.indexOf(rules[i].tag) !== -1) return rules[i];
+      }
+      for (var i = 0; i < rules.length; i++) {
+        if (!rules[i].tag) return rules[i];
+      }
+      return {};
+    }
+
+    function makeMarker(lat, lng, markerCfg) {
+      var iconName  = markerCfg.icon        || 'circle';
+      var color     = markerCfg.markerColor || '#bf616a';
+      var iconColor = markerCfg.iconColor   || '#efeff4';
+      var shape     = markerCfg.shape       || 'pin';
+      var opacity   = markerCfg.opacity !== undefined ? markerCfg.opacity : 1;
 
       var shapeStyle, size, anchor;
       var commonStyle = 'display:flex;align-items:center;justify-content:center;background:' + color + ';';
@@ -153,7 +166,7 @@
     // --- ADD MARKERS ---
     var latLngs = [];
     cfg.items.forEach(function (item) {
-      var marker = makeMarker(item.lat, item.lng);
+      var marker = makeMarker(item.lat, item.lng, resolveMarker(item));
       var popup  = L.popup().setContent(
         '<b>' + item.name + '</b><br><a class="nav" href="#">Open \u2197</a>'
       );

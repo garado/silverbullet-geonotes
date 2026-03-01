@@ -228,7 +228,7 @@ export async function mapWidget(
   const css = await asset.readAsset("geonotes", "assets/geonotes.css");
   const mapInitJs = await asset.readAsset("geonotes", "assets/map_init.js");
 
-  const geoData = JSON.stringify({ items, tile, zoomControl, center, marker: config.marker, css })
+  const geoData = JSON.stringify({ items, tile, zoomControl, center, markers: config.markers, css })
     .replace(/<\/script>/gi, "<\\/script>");
 
   return {

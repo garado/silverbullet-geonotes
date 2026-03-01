@@ -14,24 +14,28 @@ import { parseLocation, parseCenter, extractWikiLinks, makeRegex } from "./utils
  *
  * @returns Parsed geonotes config with defaults applied
  */
-export async function getConfig(): Promise<{ frontMatterLocationKey: string; marker: MarkerConfig }> {
+export async function getConfig(): Promise<{ frontMatterLocationKey: string; markers: MarkerConfig[] }> {
   const raw = await system.getConfig("geonote", {}) as Record<string, unknown>;
-  let marker: MarkerConfig = {};
-  if (Array.isArray(raw.markers) && raw.markers.length > 0) {
-    const m = raw.markers[0] as Record<string, unknown>;
-    marker = {
-      icon: typeof m.icon === "string" ? m.icon : undefined,
-      markerColor: typeof m.markerColor === "string" ? m.markerColor : undefined,
-      iconColor: typeof m.iconColor === "string" ? m.iconColor : undefined,
-      shape: typeof m.shape === "string" ? m.shape as MarkerConfig["shape"] : undefined,
-      opacity: typeof m.opacity === "number" ? m.opacity : undefined,
-    };
+  const markers: MarkerConfig[] = [];
+  if (Array.isArray(raw.markers)) {
+    for (const m of raw.markers) {
+      if (!m || typeof m !== "object") continue;
+      const mo = m as Record<string, unknown>;
+      markers.push({
+        tag: typeof mo.tag === "string" ? mo.tag : undefined,
+        icon: typeof mo.icon === "string" ? mo.icon : undefined,
+        markerColor: typeof mo.markerColor === "string" ? mo.markerColor : undefined,
+        iconColor: typeof mo.iconColor === "string" ? mo.iconColor : undefined,
+        shape: typeof mo.shape === "string" ? mo.shape as MarkerConfig["shape"] : undefined,
+        opacity: typeof mo.opacity === "number" ? mo.opacity : undefined,
+      });
+    }
   }
   return {
     frontMatterLocationKey: typeof raw.frontMatterLocationKey === "string"
       ? raw.frontMatterLocationKey
       : "location",
-    marker,
+    markers,
   };
 }
 

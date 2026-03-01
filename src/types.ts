@@ -39,6 +39,7 @@ export interface GeoItem {
 
 /** Marker appearance config from the CONFIG `geonote.markers` array. */
 export interface MarkerConfig {
+  tag?: string;         // Item tag to match (omit for the default/fallback rule)
   icon?: string;        // Phosphor icon name, e.g. "map-pin"
   markerColor?: string; // CSS color for the shape background
   iconColor?: string;   // CSS color for the icon (default: white)
