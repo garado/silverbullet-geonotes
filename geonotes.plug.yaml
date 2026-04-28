@@ -22,3 +22,15 @@ functions:
     path: ./src/main.ts:completeGeolink
     events:
       - editor:complete
+
+  insertGeolink:
+    path: ./src/main.ts:insertGeolink
+    slashCommand:
+      name: geolink
+      description: Insert a geolink
+
+  insertMap:
+    path: ./src/main.ts:insertMap
+    slashCommand:
+      name: map
+      description: Insert a map widget

@@ -37,6 +37,16 @@ const TILES: Record<string, { url: string; maxZoom: number }> = {
  * Navigates to the SilverBullet page named after
  * the link label for any `[label](geo:...)` link, regardless of coordinates.
  */
+export async function insertGeolink(): Promise<void> {
+  await editor.insertAtCursor("[geo:");
+}
+
+export async function insertMap(): Promise<void> {
+  await editor.insertAtCursor(
+    "```map\ncenter: 37.7749, -122.4194\nzoomControl: false\nheight: 400\nzoom: 7\nstyle: \"auto\"\npath: .\n```"
+  );
+}
+
 export async function geoLinkClick(
   { pos, parentNodes, altKey }: { pos: number; parentNodes: string[]; altKey?: boolean },
 ): Promise<void> {
