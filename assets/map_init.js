@@ -172,6 +172,8 @@
           '<b>' + item.name + '</b><br><a class="nav" href="#">Open ↗</a>'
         );
         marker.bindPopup(popup);
+        marker.on('mouseover', function () { this.openPopup(); });
+        marker.on('mouseout', function () { this.closePopup(); });
         marker.on('popupopen', function () {
           popup.getElement().querySelector('.nav').addEventListener('click', function (e) {
             e.preventDefault();
