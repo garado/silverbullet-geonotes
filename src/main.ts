@@ -38,12 +38,16 @@ const TILES: Record<string, { url: string; maxZoom: number }> = {
  * the link label for any `[label](geo:...)` link, regardless of coordinates.
  */
 export async function insertGeolink(): Promise<void> {
-  await editor.insertAtCursor("[geo:");
+  const pos = await editor.getCursor();
+  await editor.insertAtCursor("[](geo:)");
+  await editor.moveCursor(pos + 1);
 }
 
 export async function insertMap(): Promise<void> {
-  await editor.insertAtCursor(
-    "```map\ncenter: 37.7749, -122.4194\nzoomControl: false\nheight: 400\nzoom: 7\nstyle: \"auto\"\npath: .\n```"
+  const pos = await editor.getCursor();
+  await editor.insertAtPos(
+    "```map\ncenter: 37.7749, -122.4194\nzoomControl: false\nheight: 400\nzoom: 7\nstyle: \"auto\"\npath: .\n```",
+    pos
   );
 }
 
