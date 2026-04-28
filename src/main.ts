@@ -187,7 +187,7 @@ export async function mapWidget(
       if (typeof parsed.style === "string") style = parsed.style;
       if (typeof parsed.linkedFrom === "string") query.linkedFrom = parsed.linkedFrom;
       if (typeof parsed.linkedTo === "string") query.linkedTo = parsed.linkedTo;
-      if (typeof parsed.path === "string") query.path = parsed.path;
+      if (typeof parsed.path === "string") query.path = parsed.path === "." ? pageName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : parsed.path;
       if (typeof parsed.name === "string") query.name = parsed.name;
       if (typeof parsed.tag === "string") query.tag = parsed.tag;
     } catch { /* use defaults */ }
