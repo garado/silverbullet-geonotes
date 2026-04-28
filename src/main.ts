@@ -56,13 +56,12 @@ export async function geoLinkClick(
 /**
  * Completion handler for geolinks.
  *
- * Triggers when the cursor is after `[geo:` followed by a search query, e.g.
- * `[geo:Mount Pulag`. Searches Nominatim and offers up to 5 place suggestions.
+ * Triggers when the cursor is inside the label of a `[label](geo:)` link and
+ * searches Nominatim with the full label text, returning up to 5 place suggestions.
  *
- * Selecting a result replaces the entire `[geo:query` with
- * `[display name](geo:lat,lon)`.  Because the replacement ends at the cursor
- * (nothing after the cursor needs to be removed), this works without relying on
- * the `to` field extending past the cursor position.
+ * Selecting a result replaces the entire `[label](geo:)` with
+ * `[display name](geo:lat,lon)` using the `to` field to extend the replacement
+ * range beyond the cursor.
  *
  * @param context - Completion context with linePrefix text and cursor position
  * @returns Completion options with from/to range, or null if not in a geolink
@@ -70,17 +69,24 @@ export async function geoLinkClick(
 export async function completeGeolink(
   { linePrefix, pos }: { linePrefix: string; pos: number },
 ): Promise<{ from: number; options: { label: string; detail: string; apply: string }[] } | null> {
-  // Trigger: cursor must be after `[geo:` with at least 2 chars of query text
-  const labelMatch = /\[geo:([^\]]*)$/.exec(linePrefix);
+  // Cursor must be inside [ ... ] of a geolink — find last [ with no ] before cursor
+  const labelMatch = /\[([^\]]*)$/.exec(linePrefix);
   if (!labelMatch) return null;
 
-  const query = labelMatch[1].trim();
-  if (query.length < 2) return null;
+  // Text after cursor must complete the geolink: optional remaining label + ](geo:...)
+  const fullText = await editor.getText();
+  const afterCursor = fullText.slice(pos);
+  const afterMatch = /^([^\]]*)\]\(geo:[^)]*\)/.exec(afterCursor);
+  if (!afterMatch) return null;
+
+  // Combine label text from both sides of the cursor
+  const fullLabel = (labelMatch[1] + afterMatch[1]).trim();
+  if (fullLabel.length < 2) return null;
 
   let results: any[];
   try {
     const resp = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}`,
+      `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(fullLabel)}`,
       { headers: { "User-Agent": "SilverBullet-GeoNotes/1.0" } },
     );
     results = await resp.json();
@@ -91,12 +97,13 @@ export async function completeGeolink(
   if (!results.length) return null;
 
   return {
-    from: pos - labelMatch[0].length, // position of the opening [
+    from: pos - labelMatch[1].length, // position right after the opening [
+    to: pos + afterMatch[0].length,   // consume remaining label + ](geo:...)
     filter: false,
     options: results.map((r: any) => ({
       label: r.display_name,
       detail: `${r.lat}, ${r.lon}`,
-      apply: `[${r.name}](geo:${r.lat},${r.lon})`,
+      apply: `${r.name}](geo:${r.lat},${r.lon})`,
     })),
   };
 }
