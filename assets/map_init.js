@@ -188,7 +188,14 @@
           el.addEventListener('mouseleave', function () { marker.closePopup(); });
           el.querySelector('.nav').addEventListener('click', function (e) {
             e.preventDefault();
-            syscall('editor.navigate', { page: item.page });
+            if (item.ref) {
+              var atIdx = item.ref.lastIndexOf('@');
+              var navPage = item.ref.slice(0, atIdx);
+              var navPos  = parseInt(item.ref.slice(atIdx + 1));
+              syscall('editor.navigate', { page: navPage, pos: navPos });
+            } else {
+              syscall('editor.navigate', { page: item.page });
+            }
           }, { once: true });
         });
         markersLayer.addLayer(marker);
@@ -223,7 +230,7 @@
           var rest = m[4] || '';
           var tags = (rest.match(/#[\w/-]+/g) || []).map(function (t) { return t.slice(1); });
           var description = rest.replace(/#[\w/-]+/g, '').trim() || undefined;
-          parsed.push({ type: 'link', name: m[1] || (lat + ', ' + lng), page: currentPage, lat: lat, lng: lng, tags: tags, description: description });
+          parsed.push({ type: 'link', name: m[1] || (lat + ', ' + lng), page: currentPage, lat: lat, lng: lng, tags: tags, description: description, ref: currentPage + '@' + m.index });
         }
         var otherItems = currentItems.filter(function (i) { return i.page !== currentPage; });
         currentItems = otherItems.concat(parsed);

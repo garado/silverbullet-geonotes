@@ -219,7 +219,7 @@ export async function mapWidget(
     const geoLinks = await index.queryLuaObjects<GeoLink>("geolink", {});
     allItems = [
       ...geoPages.map((p) => ({ type: "page" as const, name: p.name.split("/").pop() ?? p.name, page: p.name, lat: p.lat, lng: p.lng, tags: [] })),
-      ...geoLinks.map((l) => ({ type: "link" as const, name: l.name, page: l.page, lat: l.lat, lng: l.lng, tags: l.tags ?? [], description: l.description })),
+      ...geoLinks.map((l) => ({ type: "link" as const, name: l.name, page: l.page, lat: l.lat, lng: l.lng, tags: l.tags ?? [], description: l.description, ref: l.ref })),
     ];
   } catch { /* leave allItems empty */ }
 

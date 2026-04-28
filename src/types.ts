@@ -37,6 +37,8 @@ export interface GeoItem {
   lng: number;
   tags: string[];
   description?: string;
+  /** For geolinks: "page@charOffset" used to navigate to the exact line. */
+  ref?: string;
 }
 
 /** Marker appearance config from the CONFIG `geonote.markers` array. */
