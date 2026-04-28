@@ -23,6 +23,7 @@ export interface GeoLink {
   lat: number;
   lng: number;
   tags: string[];
+  description?: string;
 }
 
 /** A unified geo item from either a geopage or geolink source. */
@@ -35,6 +36,7 @@ export interface GeoItem {
   lat: number;
   lng: number;
   tags: string[];
+  description?: string;
 }
 
 /** Marker appearance config from the CONFIG `geonote.markers` array. */

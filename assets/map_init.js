@@ -169,7 +169,9 @@
       items.forEach(function (item) {
         var marker = makeMarker(item.lat, item.lng, resolveMarker(item));
         var popup  = L.popup().setContent(
-          '<b>' + item.name + '</b><br><a class="nav" href="#">Open ↗</a>'
+          '<b>' + item.name + '</b>'
+          + (item.description ? '<br><span>' + item.description + '</span>' : '')
+          + '<br><a class="nav" href="#">Open ↗</a>'
         );
         marker.bindPopup(popup);
         var closeTimer = null;
@@ -207,7 +209,7 @@
     // --- REFRESH BUTTON ---
     // Re-parses geolinks (with tags) directly from the editor text so the map
     // updates immediately without waiting for the page index to rebuild.
-    var geolinkRe = /\[([^\]]*)\]\(geo:([^,)]+),([^)]+)\)((?:\s+#[\w/-]+)*)/g;
+    var geolinkRe = /\[([^\]]*)\]\(geo:([^,)]+),([^)]+)\)([^\n]*)/g;
 
     function refresh() {
       syscall('editor.getText').then(function (text) {
@@ -218,9 +220,10 @@
           var lat = parseFloat(m[2].trim());
           var lng  = parseFloat(m[3].trim());
           if (!isFinite(lat) || !isFinite(lng)) continue;
-          var tags = (m[4] || '').match(/#[\w/-]+/g) || [];
-          tags = tags.map(function (t) { return t.slice(1); });
-          parsed.push({ type: 'link', name: m[1] || (lat + ', ' + lng), page: currentPage, lat: lat, lng: lng, tags: tags });
+          var rest = m[4] || '';
+          var tags = (rest.match(/#[\w/-]+/g) || []).map(function (t) { return t.slice(1); });
+          var description = rest.replace(/#[\w/-]+/g, '').trim() || undefined;
+          parsed.push({ type: 'link', name: m[1] || (lat + ', ' + lng), page: currentPage, lat: lat, lng: lng, tags: tags, description: description });
         }
         var otherItems = currentItems.filter(function (i) { return i.page !== currentPage; });
         currentItems = otherItems.concat(parsed);
