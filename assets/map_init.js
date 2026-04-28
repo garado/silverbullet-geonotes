@@ -172,10 +172,19 @@
           '<b>' + item.name + '</b><br><a class="nav" href="#">Open ↗</a>'
         );
         marker.bindPopup(popup);
-        marker.on('mouseover', function () { this.openPopup(); });
-        marker.on('mouseout', function () { this.closePopup(); });
+        var closeTimer = null;
+        marker.on('mouseover', function () {
+          clearTimeout(closeTimer);
+          this.openPopup();
+        });
+        marker.on('mouseout', function () {
+          closeTimer = setTimeout(function () { marker.closePopup(); }, 200);
+        });
         marker.on('popupopen', function () {
-          popup.getElement().querySelector('.nav').addEventListener('click', function (e) {
+          var el = popup.getElement();
+          el.addEventListener('mouseenter', function () { clearTimeout(closeTimer); });
+          el.addEventListener('mouseleave', function () { marker.closePopup(); });
+          el.querySelector('.nav').addEventListener('click', function (e) {
             e.preventDefault();
             syscall('editor.navigate', { page: item.page });
           }, { once: true });
