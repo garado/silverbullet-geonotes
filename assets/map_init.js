@@ -14,13 +14,12 @@
  *               | { type: "none" }
  *   markers     – MarkerConfig[] (ordered rules; first with matching tag wins, then first without tag)
  *   css         – geonotes.css string (injected into parent document)
+ *   page        – current page name
  */
 (function () {
   var cfg = JSON.parse(document.getElementById('geo-data').textContent);
 
   // --- FLAG PARENT ---
-  // Set an attribute on our own iframe so parent-document CSS selectors can
-  // target embedded maps (e.g. hide the copy button, remove padding).
   try {
     var allFrames = window.parent.document.body.querySelectorAll('*');
     for (var i = 0; i < allFrames.length; i++) {
@@ -57,8 +56,6 @@
   s.onload = function () {
 
     // --- MAKE MARKER ---
-    // Returns the first marker rule whose tag matches one of the item's tags,
-    // falling back to the first rule with no tag, then an empty object.
     function resolveMarker(item) {
       var rules = cfg.markers;
       for (var i = 0; i < rules.length; i++) {
@@ -84,20 +81,16 @@
       if (shape === 'circle') {
         size = [32, 32]; anchor = [16, 16];
         shapeStyle = commonStyle + 'width:32px;height:32px;border-radius:50%;';
-
       } else if (shape === 'square') {
         size = [32, 32]; anchor = [16, 16];
         shapeStyle = commonStyle + 'width:32px;height:32px;border-radius:4px;';
-
       } else if (shape === 'diamond') {
         size = [36, 36]; anchor = [18, 18];
         shapeStyle = commonStyle + 'width:26px;height:26px;transform:rotate(45deg);';
         innerStyle = 'transform:rotate(-45deg);';
-
       } else {
-        // pin (default)
         size   = [32, 32];
-        anchor = [16, 32]; // horizontal centre, points at bottom
+        anchor = [16, 32];
         shapeStyle = commonStyle
           + 'width:32px;height:32px;border-radius:50% 50% 50% 0;'
           + 'display:flex;align-items:center;justify-content:center;'
@@ -145,15 +138,12 @@
           if (data.length === 0) return;
           map.setView([parseFloat(data[0].lat), parseFloat(data[0].lon)], cfg.center.zoom);
 
-          // Replace the place-name in the fence with the resolved coordinates so
-          // future loads skip this geocoding round-trip entirely.
           var coords = data[0].lat + ', ' + data[0].lon;
           var escapedName = cfg.center.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           var re = new RegExp('([ \\t]*center:[ \\t]*)["\']?' + escapedName + '["\']?');
           syscall('editor.getText').then(function (pageText) {
             var newText = pageText.replace(re, '$1' + coords);
             if (newText === pageText) return;
-            // Find the minimal changed slice to use replaceRange
             var from = 0;
             while (from < pageText.length && pageText[from] === newText[from]) from++;
             var oldEnd = pageText.length;
@@ -168,31 +158,81 @@
       map.setView([0, 0], 2);
     }
 
-    // --- ADD MARKERS ---
-    var latLngs = [];
-    cfg.items.forEach(function (item) {
-      var marker = makeMarker(item.lat, item.lng, resolveMarker(item));
-      var popup  = L.popup().setContent(
-        '<b>' + item.name + '</b><br><a class="nav" href="#">Open \u2197</a>'
-      );
-      marker.bindPopup(popup);
-      marker.on('popupopen', function () {
-        popup.getElement().querySelector('.nav').addEventListener('click', function (e) {
-          e.preventDefault();
-          syscall('editor.navigate', { page: item.page });
-        }, { once: true });
-      });
-      marker.addTo(map);
-      latLngs.push([item.lat, item.lng]);
-    });
+    // --- MARKERS ---
+    var markersLayer = L.layerGroup().addTo(map);
+    var currentItems = cfg.items.slice();
+    var currentPage = cfg.page;
 
-    if (cfg.center.type === 'none') {
-      if (latLngs.length === 1) {
-        map.setView(latLngs[0], 13);
-      } else if (latLngs.length > 1) {
-        map.fitBounds(latLngs, { padding: [40, 40] });
+    function renderMarkers(items, fitBounds) {
+      markersLayer.clearLayers();
+      var latLngs = [];
+      items.forEach(function (item) {
+        var marker = makeMarker(item.lat, item.lng, resolveMarker(item));
+        var popup  = L.popup().setContent(
+          '<b>' + item.name + '</b><br><a class="nav" href="#">Open ↗</a>'
+        );
+        marker.bindPopup(popup);
+        marker.on('popupopen', function () {
+          popup.getElement().querySelector('.nav').addEventListener('click', function (e) {
+            e.preventDefault();
+            syscall('editor.navigate', { page: item.page });
+          }, { once: true });
+        });
+        markersLayer.addLayer(marker);
+        latLngs.push([item.lat, item.lng]);
+      });
+
+      if (fitBounds && cfg.center.type === 'none') {
+        if (latLngs.length === 1) {
+          map.setView(latLngs[0], 13);
+        } else if (latLngs.length > 1) {
+          map.fitBounds(latLngs, { padding: [40, 40] });
+        }
       }
     }
+
+    renderMarkers(currentItems, true);
+
+    // --- REFRESH BUTTON ---
+    // Re-parses geolinks (with tags) directly from the editor text so the map
+    // updates immediately without waiting for the page index to rebuild.
+    var geolinkRe = /\[([^\]]*)\]\(geo:([^,)]+),([^)]+)\)((?:\s+#[\w/-]+)*)/g;
+
+    function refresh() {
+      syscall('editor.getText').then(function (text) {
+        var parsed = [];
+        var m;
+        geolinkRe.lastIndex = 0;
+        while ((m = geolinkRe.exec(text)) !== null) {
+          var lat = parseFloat(m[2].trim());
+          var lng  = parseFloat(m[3].trim());
+          if (!isFinite(lat) || !isFinite(lng)) continue;
+          var tags = (m[4] || '').match(/#[\w/-]+/g) || [];
+          tags = tags.map(function (t) { return t.slice(1); });
+          parsed.push({ type: 'link', name: m[1] || (lat + ', ' + lng), page: currentPage, lat: lat, lng: lng, tags: tags });
+        }
+        var otherItems = currentItems.filter(function (i) { return i.page !== currentPage; });
+        currentItems = otherItems.concat(parsed);
+        renderMarkers(currentItems, false);
+      });
+    }
+
+    var RefreshControl = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function () {
+        var btn = L.DomUtil.create('button');
+        btn.innerHTML = '↻';
+        btn.title = 'Refresh map';
+        btn.style.cssText = 'cursor:pointer;font-size:18px;line-height:1;padding:3px 7px;background:#fff;border:2px solid rgba(0,0,0,0.2);border-radius:4px;';
+        L.DomEvent.on(btn, 'click', function (e) {
+          L.DomEvent.stopPropagation(e);
+          refresh();
+        });
+        return btn;
+      },
+    });
+    new RefreshControl().addTo(map);
+
   };
 
   s.onerror = function () {
