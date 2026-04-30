@@ -141,7 +141,8 @@ export async function indexGeoLinks(
     const lat = Number(match[2].trim());
     const lng = Number(match[3].trim());
     if (isFinite(lat) && isFinite(lng)) {
-      const rest = match[4] ?? "";
+      const rawRest = match[4] ?? "";
+      const rest = rawRest.includes("|") ? rawRest.split("|")[0] : rawRest;
       const tags = rest.match(/#[\w/-]+/g)?.map((t) => t.slice(1)) ?? [];
       const description = rest.replace(/#[\w/-]+/g, "").trim() || undefined;
       objects.push({

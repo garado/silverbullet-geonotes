@@ -227,7 +227,8 @@
           var lat = parseFloat(m[2].trim());
           var lng  = parseFloat(m[3].trim());
           if (!isFinite(lat) || !isFinite(lng)) continue;
-          var rest = m[4] || '';
+          var rawRest = m[4] || '';
+          var rest = rawRest.indexOf('|') !== -1 ? rawRest.split('|')[0] : rawRest;
           var tags = (rest.match(/#[\w/-]+/g) || []).map(function (t) { return t.slice(1); });
           var description = rest.replace(/#[\w/-]+/g, '').trim() || undefined;
           parsed.push({ type: 'link', name: m[1] || (lat + ', ' + lng), page: currentPage, lat: lat, lng: lng, tags: tags, description: description, ref: currentPage + '@' + m.index });
