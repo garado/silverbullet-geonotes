@@ -24,6 +24,7 @@ export interface GeoLink {
   lng: number;
   tags: string[];
   description?: string;
+  image?: string;  // optional URL embedded as 3rd arg in geo:lat,lng,url
 }
 
 /** A unified geo item from either a geopage or geolink source. */
@@ -37,6 +38,7 @@ export interface GeoItem {
   lng: number;
   tags: string[];
   description?: string;
+  image?: string;  // optional URL embedded as 3rd arg in geo:lat,lng,url
   /** For geolinks: "page@charOffset" used to navigate to the exact line. */
   ref?: string;
 }

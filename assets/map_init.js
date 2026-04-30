@@ -28,7 +28,7 @@
         break;
       }
     }
-  } catch (_e) {}
+  } catch (_e) { }
 
   // --- INJECT CSS into parent document (idempotent) ---
   try {
@@ -39,7 +39,7 @@
       window.parent.document.head.appendChild(_style);
     }
     _style.textContent = cfg.css;
-  } catch (_e) {}
+  } catch (_e) { }
 
   // --- LOAD DEPS ---
   var link = document.createElement('link');
@@ -68,15 +68,15 @@
     }
 
     function makeMarker(lat, lng, markerCfg) {
-      var iconName  = markerCfg.icon        || 'circle';
-      var color     = markerCfg.markerColor || '#bf616a';
-      var iconColor = markerCfg.iconColor   || '#efeff4';
-      var shape     = markerCfg.shape       || 'pin';
-      var opacity   = markerCfg.opacity !== undefined ? markerCfg.opacity : 1;
+      var iconName = markerCfg.icon || 'circle';
+      var color = markerCfg.markerColor || '#bf616a';
+      var iconColor = markerCfg.iconColor || '#efeff4';
+      var shape = markerCfg.shape || 'pin';
+      var opacity = markerCfg.opacity !== undefined ? markerCfg.opacity : 1;
 
       var shapeStyle, size, anchor;
       var commonStyle = 'display:flex;align-items:center;justify-content:center;background:' + color + ';';
-      var innerStyle  = 'transform:rotate(0deg);';
+      var innerStyle = 'transform:rotate(0deg);';
 
       if (shape === 'circle') {
         size = [32, 32]; anchor = [16, 16];
@@ -89,7 +89,7 @@
         shapeStyle = commonStyle + 'width:26px;height:26px;transform:rotate(45deg);';
         innerStyle = 'transform:rotate(-45deg);';
       } else {
-        size   = [32, 32];
+        size = [32, 32];
         anchor = [16, 32];
         shapeStyle = commonStyle
           + 'width:32px;height:32px;border-radius:50% 50% 50% 0;'
@@ -121,8 +121,8 @@
     var map = L.map('map', { zoomControl: cfg.zoomControl });
     var tile = cfg.tile.auto
       ? (window.parent.document.documentElement.getAttribute('data-theme') === 'dark'
-          ? cfg.tile.dark
-          : cfg.tile.light)
+        ? cfg.tile.dark
+        : cfg.tile.light)
       : cfg.tile;
     L.tileLayer(tile.url, { maxZoom: tile.maxZoom }).addTo(map);
 
@@ -168,20 +168,32 @@
       var latLngs = [];
       items.forEach(function (item) {
         var marker = makeMarker(item.lat, item.lng, resolveMarker(item));
-        var popup  = L.popup().setContent(
+        var imgs = item.image
+          ? '<div style="margin:6px 0 2px"><img src="' + item.image + '" style="height:200px;width:200px;object-fit:cover;border-radius:4px;cursor:zoom-in;display:block" onclick="window.open(\'' + item.image + '\',\'_blank\')" /></div>'
+          : '';
+        var popup = L.popup().setContent(
           '<b>' + item.name + '</b>'
           + (item.description ? '<br><span>' + item.description + '</span>' : '')
+          + imgs
           + '<br><a class="nav" href="#">Open ↗</a>'
         );
         marker.bindPopup(popup);
         var closeTimer = null;
+        var pinned = false;
+        marker.on('click', function () {
+          clearTimeout(closeTimer);
+          pinned = !pinned;
+          this.openPopup();
+        });
         marker.on('mouseover', function () {
           clearTimeout(closeTimer);
           this.openPopup();
         });
         marker.on('mouseout', function () {
+          if (pinned) return;
           closeTimer = setTimeout(function () { marker.closePopup(); }, 200);
         });
+        marker.on('popupclose', function () { pinned = false; });
         marker.on('popupopen', function () {
           var el = popup.getElement();
           el.addEventListener('mouseenter', function () { clearTimeout(closeTimer); });
@@ -191,7 +203,7 @@
             if (item.ref) {
               var atIdx = item.ref.lastIndexOf('@');
               var navPage = item.ref.slice(0, atIdx);
-              var navPos  = parseInt(item.ref.slice(atIdx + 1));
+              var navPos = parseInt(item.ref.slice(atIdx + 1));
               syscall('editor.navigate', { page: navPage, pos: navPos });
             } else {
               syscall('editor.navigate', { page: item.page });
@@ -216,7 +228,7 @@
     // --- REFRESH BUTTON ---
     // Re-parses geolinks (with tags) directly from the editor text so the map
     // updates immediately without waiting for the page index to rebuild.
-    var geolinkRe = /\[([^\]]*)\]\(geo:([^,)]+),([^)]+)\)([^\n]*)/g;
+    var geolinkRe = /\[([^\]]*)\]\(geo:([^,)]+),([^,)]+)(?:,([^)]+))?\)([^\n]*)/g;
 
     function refresh() {
       syscall('editor.getText').then(function (text) {
@@ -225,13 +237,14 @@
         geolinkRe.lastIndex = 0;
         while ((m = geolinkRe.exec(text)) !== null) {
           var lat = parseFloat(m[2].trim());
-          var lng  = parseFloat(m[3].trim());
+          var lng = parseFloat(m[3].trim());
           if (!isFinite(lat) || !isFinite(lng)) continue;
-          var rawRest = m[4] || '';
+          var image = m[4] ? m[4].trim() : undefined;
+          var rawRest = m[5] || '';
           var rest = rawRest.indexOf('|') !== -1 ? rawRest.split('|')[0] : rawRest;
           var tags = (rest.match(/#[\w/-]+/g) || []).map(function (t) { return t.slice(1); });
           var description = rest.replace(/#[\w/-]+/g, '').trim() || undefined;
-          parsed.push({ type: 'link', name: m[1] || (lat + ', ' + lng), page: currentPage, lat: lat, lng: lng, tags: tags, description: description, ref: currentPage + '@' + m.index });
+          parsed.push({ type: 'link', name: m[1] || (lat + ', ' + lng), page: currentPage, lat: lat, lng: lng, tags: tags, description: description, image: image, ref: currentPage + '@' + m.index });
         }
         var otherItems = currentItems.filter(function (i) { return i.page !== currentPage; });
         currentItems = otherItems.concat(parsed);

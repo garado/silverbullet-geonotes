@@ -135,13 +135,14 @@ export async function indexGeoLinks(
   { name, text }: { name: string; text: string },
 ): Promise<void> {
   const objects: GeoLink[] = [];
-  const regex = /\[([^\]]*)\]\(geo:([^,)]+),([^)]+)\)([^\n]*)/g;
+  const regex = /\[([^\]]*)\]\(geo:([^,)]+),([^,)]+)(?:,([^)]+))?\)([^\n]*)/g;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
     const lat = Number(match[2].trim());
     const lng = Number(match[3].trim());
     if (isFinite(lat) && isFinite(lng)) {
-      const rawRest = match[4] ?? "";
+      const image = match[4]?.trim() || undefined;
+      const rawRest = match[5] ?? "";
       const rest = rawRest.includes("|") ? rawRest.split("|")[0] : rawRest;
       const tags = rest.match(/#[\w/-]+/g)?.map((t) => t.slice(1)) ?? [];
       const description = rest.replace(/#[\w/-]+/g, "").trim() || undefined;
@@ -154,6 +155,7 @@ export async function indexGeoLinks(
         lng,
         tags,
         description,
+        image,
       });
     }
   }
@@ -234,7 +236,7 @@ export async function mapWidget(
     const geoLinks = await index.queryLuaObjects<GeoLink>("geolink", {});
     allItems = [
       ...geoPages.map((p) => ({ type: "page" as const, name: p.name.split("/").pop() ?? p.name, page: p.name, lat: p.lat, lng: p.lng, tags: [] })),
-      ...geoLinks.map((l) => ({ type: "link" as const, name: l.name, page: l.page, lat: l.lat, lng: l.lng, tags: l.tags ?? [], description: l.description, ref: l.ref })),
+      ...geoLinks.map((l) => ({ type: "link" as const, name: l.name, page: l.page, lat: l.lat, lng: l.lng, tags: l.tags ?? [], description: l.description, image: l.image, ref: l.ref })),
     ];
   } catch { /* leave allItems empty */ }
 

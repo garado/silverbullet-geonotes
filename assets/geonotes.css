@@ -31,6 +31,17 @@
 }
 .leaflet-popup-content a.nav:hover { text-decoration: underline; }
 .leaflet-close-button { color: var(--subtle-color) !important; }
+.popup-imgs {
+  margin: 6px 0 2px;
+}
+.popup-imgs img {
+  height: 80px;
+  width: 140px;
+  object-fit: cover;
+  border-radius: 4px;
+  cursor: zoom-in;
+  display: block;
+}
 
 
 #debug { 
