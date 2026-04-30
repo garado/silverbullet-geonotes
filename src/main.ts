@@ -9,7 +9,7 @@
  ********************************************************************************/
 
 import { asset, editor, index } from "@silverbulletmd/silverbullet/syscalls";
-import { parse as parseYaml } from "@std/yaml";
+import { load as parseYaml } from "js-yaml";
 import { GeoLink, GeoItem, GeoQuery } from "./types.ts";
 import { parseCenter } from "./utils.ts";
 import { getConfig, queryGeoPages, applyQuery } from "./geo.ts"

@@ -13,11 +13,12 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          packages = [ pkgs.deno ];
+          packages = [ pkgs.nodejs pkgs.nodePackages.npm ];
 
           shellHook = ''
             echo "SilverBullet plug dev environment"
-            echo "  deno task build  — compile the plug"
+            echo "  npm install     — install deps (first time)"
+            echo "  npm run build   — compile the plug"
           '';
         };
       });
