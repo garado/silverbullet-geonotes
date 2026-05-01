@@ -28,8 +28,10 @@ Insert a map anywhere in your notes with a ` ```map ``` ` code fence.
 | `linkedFrom` | Show items from pages wiki-linked from pages matching this regex |
 | `linkedTo` | Show items from pages that wiki-link to pages matching this regex |
 
+The `center` option supports coordinate autocomplete - type a location as a string, and Nominatim will try to fill it in with the correct latitude/longitude.
+
 **Map behavior:**
-- Hover a pin to see its popup
+- Hover over a map marker to see its popup
 - Popup shows the item name, description (if any), image (if any), and an "Open" link that navigates to the exact line in the source page
 - Refresh button (top-right) re-reads the current page and updates markers immediately, without waiting for a page re-index
 
@@ -56,9 +58,9 @@ location: [14.5995, 120.9842]
 ---
 ```
 
-The location key is configurable via the SilverBullet CONFIG page.
+The location key is configurable via the SilverBullet `CONFIG` page.
 
-### Marker rules
+### Map marker rules
 
 Marker appearance can be customized per tag via the CONFIG page:
 
@@ -88,3 +90,7 @@ To build:
 ```
 npm run build
 ```
+
+## Future plans
+- Trying to make a full-page map view feature, like what the Excalidraw SB plugin does when you edit a diagram
+- Trying to make geolinks navigate to some configurable destination (in google maps maybe, or in the full-page map view once that is implemented - user's choise)
