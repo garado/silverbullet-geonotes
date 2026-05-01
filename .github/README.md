@@ -1,5 +1,5 @@
 
-# Silverbullet Map View
+# Silverbullet Geonotes
 
 Like Obsidian Map View, but for Silverbullet! (Currently for SB v2.6.1)
 
@@ -9,7 +9,16 @@ Like Obsidian Map View, but for Silverbullet! (Currently for SB v2.6.1)
 
 ### Embedded map widget
 
-Insert a map anywhere in your notes with a ` ```map ``` ` code fence.
+Insert a map anywhere in your notes with a ` ```map ``` ` code fence:
+
+```
+center: -7.9383705, 113.4723862
+zoomControl: false
+height: 500
+zoom: 8
+style: "auto"
+path: .
+```
 
 **Slash command:** `/map` inserts a ready-to-use template.
 
@@ -17,7 +26,7 @@ Insert a map anywhere in your notes with a ` ```map ``` ` code fence.
 
 | Option | Description |
 |---|---|
-| `center` | Place name or coordinates (`lat, lon`) |
+| `center` | Place name (string) or coordinates (`lat, lon`). If a place name is entered, Nominatim will try to replace it with the correct lat/lon. |
 | `zoom` | Zoom level (default: 13) |
 | `height` | Widget height in pixels (default: 400) |
 | `style` | Tile style: `dark`, `light`, or `auto` for auto switching on theme |
@@ -27,8 +36,6 @@ Insert a map anywhere in your notes with a ` ```map ``` ` code fence.
 | `tag` | Show only items with this tag |
 | `linkedFrom` | Show items from pages wiki-linked from pages matching this regex |
 | `linkedTo` | Show items from pages that wiki-link to pages matching this regex |
-
-The `center` option supports coordinate autocomplete - type a location as a string, and Nominatim will try to fill it in with the correct latitude/longitude.
 
 **Map behavior:**
 - Hover over a map marker to see its popup
@@ -45,7 +52,7 @@ Inline links that encode a geographic location: `[Place Name](geo:lat,lon)`.
 - Tags can be attached after the link: `[Mount Pinatubo](geo:15.14,120.34) #geo/hike`
 
 **Slash commands:**
-- `/geolink` — starts a geolink with location autocomplete
+- `/geolink` - starts a geolink with location autocomplete
 - Type `[geo:` followed by a place name to trigger autocomplete (Nominatim/OpenStreetMap)
 
 ### Geonotes
@@ -62,7 +69,9 @@ The location key is configurable via the SilverBullet `CONFIG` page.
 
 ### Map marker rules
 
-Marker appearance can be customized per tag via the CONFIG page:
+Marker appearance can be customized per tag via the CONFIG page.
+
+They will be applied top-to-bottom.
 
 ```
 config.set {
@@ -93,4 +102,4 @@ npm run build
 
 ## Future plans
 - Trying to make a full-page map view feature, like what the Excalidraw SB plugin does when you edit a diagram
-- Trying to make geolinks navigate to some configurable destination (in google maps maybe, or in the full-page map view once that is implemented - user's choise)
+- Trying to make geolinks navigate to some configurable destination (in google maps maybe, or in the full-page map view once that is implemented - user's choice)
