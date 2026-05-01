@@ -1,6 +1,9 @@
 
 # Silverbullet Geonotes
 
+> [!WARNING]
+> This plugin is actively in development. I'm using it daily, but there are bugs everywhere.
+
 Like Obsidian Map View, but for Silverbullet! (Currently for SB v2.6.1)
 
 <img width="1465" height="1370" alt="image" src="https://github.com/user-attachments/assets/6da35da0-0a05-411d-abf8-d63118c96098" />
