@@ -1,9 +1,22 @@
 
 # Silverbullet Geonotes
 
-Like Obsidian Map View, but for Silverbullet! (Currently for SB v2.6.1)
+Like Obsidian Map View, but for Silverbullet!
 
 <img width="1465" height="1370" alt="image" src="https://github.com/user-attachments/assets/6da35da0-0a05-411d-abf8-d63118c96098" />
+
+## Installation
+
+> [!WARNING]
+> This plugin is actively in development. I use it daily, but there may be bugs.
+
+This plugin has only been tested with Silverbullet 2.6.1.
+
+To install, run the `Library: Install` command and paste the plug URI below:
+
+```
+github:garado/silverbullet-geonotes/geonotes.plug.js
+```
 
 ## Features
 
