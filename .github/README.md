@@ -29,7 +29,7 @@ path: .
 | `center` | Place name (string) or coordinates (`lat, lon`). If a place name is entered, Nominatim will try to replace it with the correct lat/lon. |
 | `zoom` | Zoom level (default: 13) |
 | `height` | Widget height in pixels (default: 400) |
-| `style` | Tile style: `dark`, `light`, or `auto` for auto switching on theme |
+| `style` | Tile style: `osm` (default), `topo`, `dark`, `light`, or `auto` for auto switching on theme. `dark`/`light` use CartoDB tiles and require a `cartoApiKey` (see Config below). |
 | `zoomControl` | Show zoom buttons (default: true) |
 | `path` | Regex filter on page path; use `.` for the current page only |
 | `name` | Regex filter on geolink/geonote display name |
@@ -85,6 +85,20 @@ config.set {
 ```
 
 Supported shapes: `pin`, `circle`, `square`, `diamond`. Icons are from the [Phosphor icon set](https://phosphoricons.com/).
+
+### CartoDB API key
+
+The `dark`/`light` map styles use CartoDB basemap tiles, which require an API key.
+
+Get a free API key [here](https://carto.com/basemaps/apikey/), then set it in the CONFIG page:
+
+```
+config.set {
+  geonote = {
+    cartoApiKey = "your-cartodb-api-key"
+  }
+}
+```
 
 ## Development
 
