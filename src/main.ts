@@ -210,8 +210,14 @@ export async function mapWidget(
     } catch { /* use defaults */ }
   }
 
+  const config = await getConfig();
+  const withCartoKey = (t: { url: string; maxZoom: number }): { url: string; maxZoom: number } =>
+    config.cartoApiKey ? { ...t, url: `${t.url}?api_key=${config.cartoApiKey}` } : t;
+
   const tile = style === "auto"
-    ? { auto: true, light: TILES.light, dark: TILES.dark }
+    ? { auto: true, light: withCartoKey(TILES.light), dark: withCartoKey(TILES.dark) }
+    : (style === "dark" || style === "light")
+    ? withCartoKey(TILES[style])
     : (TILES[style] ?? TILES.osm);
 
   // Normalise center into the JSON shape consumed by map_init.js
@@ -229,7 +235,6 @@ export async function mapWidget(
   }
 
   // Build unified geo items from geonotes and geolinks, then apply query filters
-  const config = await getConfig();
   let allItems: GeoItem[] = [];
   try {
     const geoPages = await queryGeoPages(config.frontMatterLocationKey);

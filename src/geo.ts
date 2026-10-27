@@ -14,7 +14,7 @@ import { parseLocation, parseCenter, extractWikiLinks, makeRegex } from "./utils
  *
  * @returns Parsed geonotes config with defaults applied
  */
-export async function getConfig(): Promise<{ frontMatterLocationKey: string; markers: MarkerConfig[] }> {
+export async function getConfig(): Promise<{ frontMatterLocationKey: string; markers: MarkerConfig[]; cartoApiKey?: string }> {
   const raw = await system.getConfig("geonote", {}) as Record<string, unknown>;
   const markers: MarkerConfig[] = [];
   if (Array.isArray(raw.markers)) {
@@ -36,6 +36,7 @@ export async function getConfig(): Promise<{ frontMatterLocationKey: string; mar
       ? raw.frontMatterLocationKey
       : "location",
     markers,
+    cartoApiKey: typeof raw.cartoApiKey === "string" ? raw.cartoApiKey : undefined,
   };
 }
 
