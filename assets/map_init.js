@@ -196,6 +196,8 @@
         marker.on('popupclose', function () { pinned = false; });
         marker.on('popupopen', function () {
           var el = popup.getElement();
+          if (el.dataset.wired) return;
+          el.dataset.wired = '1';
           el.addEventListener('mouseenter', function () { clearTimeout(closeTimer); });
           el.addEventListener('mouseleave', function () { marker.closePopup(); });
           el.querySelector('.nav').addEventListener('click', function (e) {
@@ -208,7 +210,7 @@
             } else {
               syscall('editor.navigate', { page: item.page });
             }
-          }, { once: true });
+          });
         });
         markersLayer.addLayer(marker);
         latLngs.push([item.lat, item.lng]);
