@@ -212,7 +212,7 @@ export async function mapWidget(
 
   const config = await getConfig();
   const withCartoKey = (t: { url: string; maxZoom: number }): { url: string; maxZoom: number } =>
-    config.cartoApiKey ? { ...t, url: `${t.url}?api_key=${config.cartoApiKey}` } : t;
+    config.cartoApiKey ? { ...t, url: `${t.url}?key=${config.cartoApiKey}` } : t;
 
   const tile = style === "auto"
     ? { auto: true, light: withCartoKey(TILES.light), dark: withCartoKey(TILES.dark) }
